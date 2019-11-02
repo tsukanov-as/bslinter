@@ -87,7 +87,7 @@ class Tokens(EnumBase):
     EOF = auto()
     COMMENT = auto()    # //
     LABEL = auto()      # ~
-    DIRECTIVE = auto()  # &
+    # DIRECTIVE = auto()  # &
 
 class Directives(EnumBase):
 

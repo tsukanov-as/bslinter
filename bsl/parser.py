@@ -73,7 +73,27 @@ init_of_expr = {
     Keywords.NULL,
 }
 
-Error = namedtuple('Error', 'text line pos')
+class ParserException(Exception):
+    def __init__(self, text: str, pos: int):
+        self.text = text
+        self.pos = pos
+
+class UnexpectedSyntax(ParserException):
+    pass
+
+class UnexpectedChar(UnexpectedSyntax):
+    pass
+
+class UnexpectedToken(UnexpectedSyntax):
+    pass
+
+class UnknownToken(UnexpectedSyntax):
+    pass
+
+class AlreadyDeclared(ParserException):
+    pass
+
+Error = namedtuple('Error', 'text pos line')
 
 TypeParser = TypeVar('TypeParser', bound='Parser')
 class Parser:
@@ -274,7 +294,7 @@ class Parser:
                 self.next()
 
                 if not self.char.isalpha():
-                    self.error('Expected directive', self.cur_pos, True)
+                    raise UnexpectedChar('Directive expected', self.cur_pos)
 
                 # scan ident
                 beg = self.cur_pos
@@ -286,8 +306,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    self.error(f'Unknown directive: "{self.lit}"', self.cur_pos, False)  # TODO: check pos, do not raise?
-                    self.tok = Tokens.DIRECTIVE
+                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.cur_pos) # TODO: check pos
 
             elif self.char == '#':
 
@@ -300,7 +319,7 @@ class Parser:
                     self.next()
 
                 if not self.char.isalpha():
-                    self.error('Expected preprocessor instruction', self.cur_pos, True)
+                    raise UnexpectedChar('Preprocessor instruction expected', self.cur_pos)
 
                 # scan ident
                 beg = self.cur_pos
@@ -312,7 +331,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    self.error(f'Unknown preprocessor instruction: "{self.lit}"', self.cur_pos, True)  # TODO: do not raise?
+                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', self.cur_pos)
 
             elif self.char == '~':
 
@@ -341,7 +360,7 @@ class Parser:
                     self.tok = tok
                     self.next()
                 else:
-                    raise Exception('Unknown char!')
+                    raise UnexpectedChar('Unknown char', self.cur_pos)
 
             if not comment:
                 break
@@ -359,13 +378,14 @@ class Parser:
 
     def expect(self, tok: Union[Tokens, Keywords]):
         if self.tok != tok:
-            self.error(f'expected {tok}', self.beg_pos, True)
+            raise UnexpectedToken(f'{tok} expected', self.beg_pos)
 
-    def error(self: TypeParser, text, pos, stop):
-        if stop:
-            raise Exception(text)
-        else:
-            print(text, pos)
+    def error(self: TypeParser, text, pos, line):
+        self.errors.append(Error(text, pos, line))
+        # if stop:
+        #     raise Exception(text)
+        # else:
+        #     print(text, pos)
 
     def find_item(self: TypeParser, name) -> Optional[ast.Item]:
         item = self.scope.Items.get(name)
@@ -404,12 +424,11 @@ class Parser:
         for name in self.unknown:
             places = self.callsites[self.unknown[name]]
             for place in places:
-                error = Error(
+                self.error(
                     f'Undeclared method "{name}"',
-                    place.BegLine,
-                    place.BegPos
+                    place.BegPos,
+                    place.BegLine
                 )
-                self.errors.append(error)
         self.expect(Tokens.EOF)
         return module
 
@@ -533,7 +552,7 @@ class Parser:
         elif tok == Keywords.NEW:
             operand = self.parseNewExpr()
         else:
-            self.error('Expected operand', self.cur_pos, True)  # TODO: check pos
+            raise UnexpectedToken('Operand expected', self.cur_pos) # TODO: check pos
         return operand
 
     def parseStringExpr(self: TypeParser) -> ast.StringExpr:
@@ -555,8 +574,7 @@ class Parser:
                 append_this()
                 while self.scan() == Tokens.STRINGMID:
                     append_this()
-                if self.tok != Tokens.STRINGEND:
-                    self.error('Expected "', self.cur_pos, True)  # TODO: check pos
+                self.expect(Tokens.STRINGEND) # TODO: check pos
                 append_this()
                 self.scan()
             else:
@@ -581,7 +599,7 @@ class Parser:
                 self.expect(Tokens.RPAREN)
             self.scan()
         if name is None and args is None:
-            self.error('Expected constructor', self.end_pos, True)
+            raise UnexpectedSyntax('Constructor expected', self.end_pos)
         expr = ast.NewExpr(
             name,
             args,
@@ -628,7 +646,7 @@ class Parser:
                     new_var = item
                 else:
                     item = ast.Item(name)
-                    # self.error(f'Undeclared identifier "{name}"', marker[1], False)
+                    self.error(f'Undeclared identifier "{name}"', marker[0], marker[1])
         expr = ast.IdentExpr(
             item,
             tail,
@@ -668,7 +686,7 @@ class Parser:
             elif self.tok == Tokens.LBRACK:
                 call = False
                 if self.scan() == Tokens.RBRACK:
-                    self.error('Expected expression', marker[0], True)
+                    raise UnexpectedSyntax('Expression expected', marker[0])
                 index = self.parseExpression()
                 self.expect(Tokens.RBRACK)
                 self.scan()
@@ -812,7 +830,7 @@ class Parser:
             self.place_from(marker)
         )
         if self.vars.get(name_lower) is not None:
-            self.error('Identifier already declared', marker[0], True)
+            raise AlreadyDeclared('Identifier already declared', marker[0])
         item = ast.Item(name, decl)
         self.vars[name_lower] = item
         if export:
@@ -841,7 +859,7 @@ class Parser:
             self.place()
         )
         if self.vars.get(name_lower) is not None:
-            self.error("Identifier already declared", marker[0], True)
+            raise AlreadyDeclared("Identifier already declared", marker[0])
         self.vars[name_lower] = ast.Item(name, decl)
         self.scan()
         return decl
@@ -882,7 +900,7 @@ class Parser:
         else:
             item = ast.Item(name, sign)
         if self.methods.get(name_lower) is not None:
-            self.error('Method already declared', marker[0], True)
+            raise AlreadyDeclared('Method already declared', marker[0])
         self.methods[name_lower] = item
         if export:
             self.interface.append(item)
@@ -945,7 +963,7 @@ class Parser:
                 self.place_from(marker)
             )
         if self.vars.get(name_lower):
-            self.error('Identifier already declared', marker[0], True)
+            raise AlreadyDeclared('Identifier already declared', marker[0])
         self.vars[name_lower] = ast.Item(name, decl)
         return decl
 
@@ -1150,7 +1168,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr()
         if call:
-            self.error('Expected variable', var_pos, True)
+            raise UnexpectedSyntax('Variable expected', var_pos)
         self.expect(Tokens.EQL)
         self.scan()
         from_expr = self.parseExpression()
@@ -1182,7 +1200,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr(True)
         if call:
-            self.error('Expected variable', var_pos, True)
+            raise UnexpectedSyntax('Variable expected', var_pos)
         self.expect(Keywords.IN)
         self.scan()
         collection = self.parseExpression()
@@ -1302,7 +1320,7 @@ class Parser:
         elif self.tok == Tokens.LPAREN:
             operand = self.parsePrepParenExpr()
         else:
-            self.error('Expected preprocessor symbol', self.cur_pos - len(self.lit), True)
+            raise UnexpectedToken('Preprocessor symbol expected', self.cur_pos - len(self.lit))
         return operand
 
     def parsePrepSymExpr(self) -> ast.PrepExpr:

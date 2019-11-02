@@ -1,2 +1,5 @@
 /.mypy_cache/
+/.pytest_cache/
 __pycache__
+*.xml
+sandbox.py
