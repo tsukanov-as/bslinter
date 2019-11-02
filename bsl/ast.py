@@ -2,17 +2,16 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from typing import Union, List, Dict, Optional, TypeVar
+from typing import Union, List, Dict, Optional
 from decimal import Decimal
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
 from bsl.visitor import Visitor, Plugin
 from abc import abstractmethod
 
-TypeScope = TypeVar('TypeScope', bound='Scope')
 class Scope:
 
-    def __init__(self, outer: Optional[TypeScope] = None):
-        self.Outer: Optional[TypeScope] = outer
+    def __init__(self, outer: Optional['Scope'] = None):
+        self.Outer: Optional['Scope'] = outer
         self.Items: Dict[str, Item] = {}
         self.Auto: List[AutoDecl] = []
 
