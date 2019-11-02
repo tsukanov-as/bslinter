@@ -699,7 +699,7 @@ class Parser:
         return tail, call
 
     def parseArguments(self) -> ast.Args:
-        expr_list: List[Optional[ast.Expr]] = []
+        expr_list: ast.Args = []
         while True:
             if self.tok in init_of_expr:
                 expr_list.append(self.parseExpression())

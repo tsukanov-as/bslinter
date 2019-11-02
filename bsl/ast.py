@@ -76,11 +76,11 @@ class Decl(Node):
 class VarModListDecl(Decl):
     """
     Хранит информацию об инструкции объявления переменных уровня модуля.
-	Пример:
-	<pre>
-	&НаКлиенте            // поле "Directive"
-	Перем П1 Экспорт, П2; // поле "List"
-	</pre>
+    Пример:
+    <pre>
+    &НаКлиенте            // поле "Directive"
+    Перем П1 Экспорт, П2; // поле "List"
+    </pre>
     """
     def __init__(self, directive, varlist, place):
         self.Directive: Optional[Directives] = directive
