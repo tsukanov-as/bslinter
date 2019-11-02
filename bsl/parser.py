@@ -73,10 +73,12 @@ init_of_expr = {
     Keywords.NULL,
 }
 
+Marker = namedtuple('Marker', 'pos line')
+
 class ParserException(Exception):
-    def __init__(self, text: str, pos: int):
+    def __init__(self, text: str, marker: Marker):
         self.text = text
-        self.pos = pos
+        (self.pos, self.line) = marker
 
 class UnexpectedSyntax(ParserException):
     pass
@@ -293,7 +295,7 @@ class Parser:
                 self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Directive expected', self.cur_pos)
+                    raise UnexpectedChar('Directive expected', Marker(self.cur_pos, self.cur_line))
 
                 # scan ident
                 beg = self.cur_pos
@@ -305,7 +307,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.cur_pos - len(self.lit))
+                    raise UnknownToken(f'Unknown directive: "{self.lit}"', Marker(self.cur_pos - len(self.lit), self.cur_line))
 
             elif self.char == '#':
 
@@ -318,7 +320,7 @@ class Parser:
                     self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Preprocessor instruction expected', self.cur_pos)
+                    raise UnexpectedChar('Preprocessor instruction expected', Marker(self.cur_pos, self.cur_line))
 
                 # scan ident
                 beg = self.cur_pos
@@ -330,7 +332,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', self.cur_pos)
+                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', Marker(self.cur_pos, self.cur_line))
 
             elif self.char == '~':
 
@@ -359,7 +361,7 @@ class Parser:
                     self.tok = tok
                     self.next()
                 else:
-                    raise UnexpectedChar('Unknown char', self.cur_pos)
+                    raise UnexpectedChar('Unknown char', Marker(self.cur_pos, self.cur_line))
 
             if not comment:
                 break
@@ -370,17 +372,17 @@ class Parser:
         return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line)
 
     def marker(self):
-        return (self.beg_pos, self.cur_line)
+        return Marker(self.beg_pos, self.cur_line)
 
     def place_from(self, marker) -> ast.Place:
-        return ast.Place(marker[0], self.end_pos, marker[1], self.end_line)
+        return ast.Place(marker.pos, self.end_pos, marker.line, self.end_line)
 
     def expect(self, tok: Union[Tokens, Keywords]):
         if self.tok != tok:
-            raise UnexpectedToken(f'{tok} expected', self.beg_pos)
+            raise UnexpectedToken(f'{tok} expected', Marker(self.beg_pos, self.cur_line))
 
-    def error(self, text, pos, line):
-        self.errors.append(Error(text, pos, line))
+    def error(self, text, marker: Marker):
+        self.errors.append(Error(text, marker.pos, marker.line))
         # if stop:
         #     raise Exception(text)
         # else:
@@ -425,8 +427,7 @@ class Parser:
             for place in places:
                 self.error(
                     f'Undeclared method "{name}"',
-                    place.BegPos,
-                    place.BegLine
+                    Marker(place.BegPos, place.BegLine)
                 )
         self.expect(Tokens.EOF)
         return module
@@ -551,7 +552,7 @@ class Parser:
         elif tok == Keywords.NEW:
             operand = self.parseNewExpr()
         else:
-            raise UnexpectedToken('Operand expected', self.cur_pos - len(self.lit))
+            raise UnexpectedToken('Operand expected', Marker(self.cur_pos - len(self.lit), self.cur_line))
         return operand
 
     def parseStringExpr(self) -> ast.StringExpr:
@@ -598,7 +599,7 @@ class Parser:
                 self.expect(Tokens.RPAREN)
             self.scan()
         if name is None and args is None:
-            raise UnexpectedSyntax('Constructor expected', self.end_pos)
+            raise UnexpectedSyntax('Constructor expected', Marker(self.end_pos, self.cur_line))
         expr = ast.NewExpr(
             name,
             args,
@@ -645,7 +646,7 @@ class Parser:
                     new_var = item
                 else:
                     item = ast.Item(name)
-                    self.error(f'Undeclared identifier "{name}"', marker[0], marker[1])
+                    self.error(f'Undeclared identifier "{name}"', marker)
         expr = ast.IdentExpr(
             item,
             tail,
@@ -685,7 +686,7 @@ class Parser:
             elif self.tok == Tokens.LBRACK:
                 call = False
                 if self.scan() == Tokens.RBRACK:
-                    raise UnexpectedSyntax('Expression expected', marker[0])
+                    raise UnexpectedSyntax('Expression expected', marker)
                 index = self.parseExpression()
                 self.expect(Tokens.RBRACK)
                 self.scan()
@@ -829,7 +830,7 @@ class Parser:
             self.place_from(marker)
         )
         if self.vars.get(name_lower) is not None:
-            raise AlreadyDeclared('Identifier already declared', marker[0])
+            raise AlreadyDeclared('Identifier already declared', marker)
         item = ast.Item(name, decl)
         self.vars[name_lower] = item
         if export:
@@ -858,7 +859,7 @@ class Parser:
             self.place()
         )
         if self.vars.get(name_lower) is not None:
-            raise AlreadyDeclared("Identifier already declared", marker[0])
+            raise AlreadyDeclared("Identifier already declared", marker)
         self.vars[name_lower] = ast.Item(name, decl)
         self.scan()
         return decl
@@ -899,7 +900,7 @@ class Parser:
         else:
             item = ast.Item(name, sign)
         if self.methods.get(name_lower) is not None:
-            raise AlreadyDeclared('Method already declared', marker[0])
+            raise AlreadyDeclared('Method already declared', marker)
         self.methods[name_lower] = item
         if export:
             self.interface.append(item)
@@ -962,7 +963,7 @@ class Parser:
                 self.place_from(marker)
             )
         if self.vars.get(name_lower):
-            raise AlreadyDeclared('Identifier already declared', marker[0])
+            raise AlreadyDeclared('Identifier already declared', marker)
         self.vars[name_lower] = ast.Item(name, decl)
         return decl
 
@@ -1167,7 +1168,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr()
         if call:
-            raise UnexpectedSyntax('Variable expected', var_pos)
+            raise UnexpectedSyntax('Variable expected', Marker(var_pos, self.cur_line))
         self.expect(Tokens.EQL)
         self.scan()
         from_expr = self.parseExpression()
@@ -1199,7 +1200,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr(True)
         if call:
-            raise UnexpectedSyntax('Variable expected', var_pos)
+            raise UnexpectedSyntax('Variable expected', Marker(var_pos, self.cur_line))
         self.expect(Keywords.IN)
         self.scan()
         collection = self.parseExpression()
@@ -1319,7 +1320,7 @@ class Parser:
         elif self.tok == Tokens.LPAREN:
             operand = self.parsePrepParenExpr()
         else:
-            raise UnexpectedToken('Preprocessor symbol expected', self.cur_pos - len(self.lit))
+            raise UnexpectedToken('Preprocessor symbol expected', Marker(self.cur_pos - len(self.lit), self.cur_line))
         return operand
 
     def parsePrepSymExpr(self) -> ast.PrepExpr:
