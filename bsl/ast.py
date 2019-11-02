@@ -268,7 +268,10 @@ class Expr(Node):
     pass
 
 
-Args = Optional[List[Optional[Expr]]]  # TODO: убрать оптионал тут
+# Общий тип для аргументов.
+# Элементы списка опциональные,
+# т.к. аргумент может быть не указан.
+Args = List[Optional[Expr]]
 
 
 class BasicLitExpr(Expr):
@@ -286,7 +289,10 @@ class BasicLitExpr(Expr):
 
 
 class TailItemExpr(Expr):
-    pass
+    """
+    Базовый класс для элементов хвоста.
+    Подклассы: FieldExpr и IndexExpr
+    """
 
 
 class FieldExpr(TailItemExpr):
@@ -303,7 +309,7 @@ class FieldExpr(TailItemExpr):
     """
     def __init__(self, name, args, place):
         self.Name: str = name
-        self.Args: Args = args # TODO: optional
+        self.Args: Optional[Args] = args
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
@@ -349,7 +355,7 @@ class IdentExpr(Expr):
     """
     def __init__(self, item, tail, args, place):
         self.Head: Item = item
-        self.Args: Args = args
+        self.Args: Optional[Args] = args
         self.Tail: List[Union[FieldExpr, IndexExpr]] = tail
         self.Place: Place = place
 
@@ -432,7 +438,7 @@ class NewExpr(Expr):
     """
     def __init__(self, name, args, place):
         self.Name: Optional[str] = name
-        self.Args: List[Optional[Expr]] = args  # TODO: поставить тут тип Args (после убирания там оптионал)
+        self.Args: Args = args
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):

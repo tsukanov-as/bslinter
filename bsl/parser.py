@@ -587,7 +587,7 @@ class Parser:
     def parseNewExpr(self) -> ast.NewExpr:
         marker = self.marker()
         name: Optional[str] = None
-        args: ast.Args
+        args: Optional[ast.Args] = None
         if self.scan() == Tokens.IDENT:
             name = self.lit
             args = []
@@ -658,7 +658,7 @@ class Parser:
         marker = self.marker()
         expr: ast.TailItemExpr
         tail: List[ast.TailItemExpr] = []
-        args: ast.Args
+        args: Optional[ast.Args] = None
         while True:
             if self.tok == Tokens.PERIOD:
                 self.scan()
