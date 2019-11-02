@@ -306,7 +306,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.cur_pos) # TODO: check pos
+                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.cur_pos - len(self.lit))
 
             elif self.char == '#':
 
@@ -552,7 +552,7 @@ class Parser:
         elif tok == Keywords.NEW:
             operand = self.parseNewExpr()
         else:
-            raise UnexpectedToken('Operand expected', self.cur_pos) # TODO: check pos
+            raise UnexpectedToken('Operand expected', self.cur_pos - len(self.lit))
         return operand
 
     def parseStringExpr(self: TypeParser) -> ast.StringExpr:
@@ -574,7 +574,7 @@ class Parser:
                 append_this()
                 while self.scan() == Tokens.STRINGMID:
                     append_this()
-                self.expect(Tokens.STRINGEND) # TODO: check pos
+                self.expect(Tokens.STRINGEND)
                 append_this()
                 self.scan()
             else:
