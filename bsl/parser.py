@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 from decimal import Decimal
-from typing import List, Union, Dict, Optional, TypeVar, Tuple
+from typing import List, Union, Dict, Optional, Tuple
 from collections import namedtuple
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
 import bsl.ast as ast
@@ -95,10 +95,9 @@ class AlreadyDeclared(ParserException):
 
 Error = namedtuple('Error', 'text pos line')
 
-TypeParser = TypeVar('TypeParser', bound='Parser')
 class Parser:
 
-    def __init__(self: TypeParser, src: str):
+    def __init__(self, src: str):
 
         self.src: str = src
 
@@ -132,12 +131,12 @@ class Parser:
 
         self.scan()
 
-    def next(self: TypeParser) -> str:
+    def next(self) -> str:
         self.cur_pos += 1
         self.char = self.src[self.cur_pos:self.cur_pos+1]
         return self.char
 
-    def scan(self: TypeParser) -> Tokens:
+    def scan(self) -> Tokens:
 
         self.end_pos = self.cur_pos
         self.end_line = self.cur_line
@@ -367,27 +366,27 @@ class Parser:
 
         return self.tok
 
-    def place(self: TypeParser) -> ast.Place:
+    def place(self) -> ast.Place:
         return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line)
 
-    def marker(self: TypeParser):
+    def marker(self):
         return (self.beg_pos, self.cur_line)
 
-    def place_from(self: TypeParser, marker) -> ast.Place:
+    def place_from(self, marker) -> ast.Place:
         return ast.Place(marker[0], self.end_pos, marker[1], self.end_line)
 
     def expect(self, tok: Union[Tokens, Keywords]):
         if self.tok != tok:
             raise UnexpectedToken(f'{tok} expected', self.beg_pos)
 
-    def error(self: TypeParser, text, pos, line):
+    def error(self, text, pos, line):
         self.errors.append(Error(text, pos, line))
         # if stop:
         #     raise Exception(text)
         # else:
         #     print(text, pos)
 
-    def find_item(self: TypeParser, name) -> Optional[ast.Item]:
+    def find_item(self, name) -> Optional[ast.Item]:
         item = self.scope.Items.get(name)
         scope = self.scope.Outer
         while item is None and scope is not None:
@@ -395,20 +394,20 @@ class Parser:
             scope = scope.Outer
         return item
 
-    def open_scope(self: TypeParser) -> ast.Scope:
+    def open_scope(self) -> ast.Scope:
         scope = ast.Scope(self.scope)
         self.scope = scope
         self.vars = scope.Items
         return scope
 
-    def close_scope(self: TypeParser) -> ast.Scope:
+    def close_scope(self) -> ast.Scope:
         scope = self.scope.Outer
         assert scope is not None
         self.scope = scope
         self.vars = scope.Items
         return scope
 
-    def parse(self: TypeParser) -> ast.Module:
+    def parse(self) -> ast.Module:
         self.open_scope()
         self.scan()
         decls = self.parseModDecls()
@@ -432,7 +431,7 @@ class Parser:
         self.expect(Tokens.EOF)
         return module
 
-    def parseExpression(self: TypeParser) -> ast.Expr:
+    def parseExpression(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseAndExpr()
         while self.tok == Keywords.OR:
@@ -446,7 +445,7 @@ class Parser:
             )
         return expr
 
-    def parseAndExpr(self: TypeParser) -> ast.Expr:
+    def parseAndExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseNotExpr()
         while self.tok == Keywords.AND:
@@ -460,7 +459,7 @@ class Parser:
             )
         return expr
 
-    def parseNotExpr(self: TypeParser) -> ast.Expr:
+    def parseNotExpr(self) -> ast.Expr:
         marker = self.marker()
         expr: ast.Expr
         if self.tok == Keywords.NOT:
@@ -473,7 +472,7 @@ class Parser:
             expr = self.parseRelExpr()
         return expr
 
-    def parseRelExpr(self: TypeParser) -> ast.Expr:
+    def parseRelExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseAddExpr()
         while self.tok in rel_operators:
@@ -487,7 +486,7 @@ class Parser:
             )
         return expr
 
-    def parseAddExpr(self: TypeParser) -> ast.Expr:
+    def parseAddExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseMulExpr()
         while self.tok in add_operators:
@@ -501,7 +500,7 @@ class Parser:
             )
         return expr
 
-    def parseMulExpr(self: TypeParser) -> ast.Expr:
+    def parseMulExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseUnaryExpr()
         while self.tok in mul_operators:
@@ -515,7 +514,7 @@ class Parser:
             )
         return expr
 
-    def parseUnaryExpr(self: TypeParser) -> ast.Expr:
+    def parseUnaryExpr(self) -> ast.Expr:
         marker = self.marker()
         operator = self.tok
         expr: ast.Expr
@@ -531,7 +530,7 @@ class Parser:
             expr = self.parseOperand()
         return expr
 
-    def parseOperand(self: TypeParser) -> ast.Expr:
+    def parseOperand(self) -> ast.Expr:
         tok = self.tok
         operand: ast.Expr
         if tok in [Tokens.STRING, Tokens.STRINGBEG]:
@@ -555,7 +554,7 @@ class Parser:
             raise UnexpectedToken('Operand expected', self.cur_pos - len(self.lit))
         return operand
 
-    def parseStringExpr(self: TypeParser) -> ast.StringExpr:
+    def parseStringExpr(self) -> ast.StringExpr:
         marker = self.marker()
         expr_list = []
         def append_this():
@@ -585,7 +584,7 @@ class Parser:
         )
         return expr
 
-    def parseNewExpr(self: TypeParser) -> ast.NewExpr:
+    def parseNewExpr(self) -> ast.NewExpr:
         marker = self.marker()
         name: Optional[str] = None
         args: ast.Args
@@ -607,7 +606,7 @@ class Parser:
         )
         return expr
 
-    def parseIdentExpr(self: TypeParser, allow_new_var: bool = False) -> Tuple[ast.IdentExpr, Optional[ast.Item], bool]:
+    def parseIdentExpr(self, allow_new_var: bool = False) -> Tuple[ast.IdentExpr, Optional[ast.Item], bool]:
         marker = self.marker()
         name = self.lit
         auto_place = self.place()
@@ -655,7 +654,7 @@ class Parser:
         )
         return expr, new_var, call
 
-    def parseTail(self: TypeParser, call: bool = False) -> Tuple[List[ast.TailItemExpr], bool]:
+    def parseTail(self, call: bool = False) -> Tuple[List[ast.TailItemExpr], bool]:
         marker = self.marker()
         expr: ast.TailItemExpr
         tail: List[ast.TailItemExpr] = []
@@ -699,7 +698,7 @@ class Parser:
                 break
         return tail, call
 
-    def parseArguments(self: TypeParser) -> ast.Args:
+    def parseArguments(self) -> ast.Args:
         expr_list: List[Optional[ast.Expr]] = []
         while True:
             if self.tok in init_of_expr:
@@ -712,7 +711,7 @@ class Parser:
                 break
         return expr_list
 
-    def parseTernaryExpr(self: TypeParser) -> ast.Expr:
+    def parseTernaryExpr(self) -> ast.Expr:
         marker = self.marker()
         self.scan()
         self.expect(Tokens.LPAREN)
@@ -739,7 +738,7 @@ class Parser:
         )
         return expr
 
-    def parseParenExpr(self: TypeParser) -> ast.Expr:
+    def parseParenExpr(self) -> ast.Expr:
         marker = self.marker()
         self.scan()
         expr = self.parseExpression()
