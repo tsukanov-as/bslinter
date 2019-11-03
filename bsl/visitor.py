@@ -15,62 +15,16 @@ class Plugin:
 
 class Visitor:
 
-    methods = [
-        'beforeVisitModule',            'afterVisitModule',
-        'beforeVisitVarModListDecl',    'afterVisitVarModListDecl',
-        'beforeVisitVarModDecl',        #'afterVisitVarModDecl',
-        'beforeVisitVarLocDecl',        #'afterVisitVarLocDecl',
-        'beforeVisitAutoDecl',          #'afterVisitAutoDecl',
-        'beforeVisitParamDecl',         'afterVisitParamDecl',
-        'beforeVisitMethodDecl',        'afterVisitMethodDecl',
-        'beforeVisitProcSign',          'afterVisitProcSign',
-        'beforeVisitFuncSign',          'afterVisitFuncSign',
-        'beforeVisitBasicLitExpr',      #'afterVisitBasicLitExpr',
-        'beforeVisitFieldExpr',         'afterVisitFieldExpr',
-        'beforeVisitIndexExpr',         'afterVisitIndexExpr',
-        'beforeVisitIdentExpr',         'afterVisitIdentExpr',
-        'beforeVisitUnaryExpr',         'afterVisitUnaryExpr',
-        'beforeVisitBinaryExpr',        'afterVisitBinaryExpr',
-        'beforeVisitNewExpr',           'afterVisitNewExpr',
-        'beforeVisitTernaryExpr',       'afterVisitTernaryExpr',
-        'beforeVisitParenExpr',         'afterVisitParenExpr',
-        'beforeVisitNotExpr',           'afterVisitNotExpr',
-        'beforeVisitStringExpr',        'afterVisitStringExpr',
-        'beforeVisitAssignStmt',        'afterVisitAssignStmt',
-        'beforeVisitReturnStmt',        'afterVisitReturnStmt',
-        'beforeVisitBreakStmt',         #'afterVisitBreakStmt',
-        'beforeVisitContinueStmt',      #'afterVisitContinueStmt',
-        'beforeVisitRaiseStmt',         'afterVisitRaiseStmt',
-        'beforeVisitExecuteStmt',       'afterVisitExecuteStmt',
-        'beforeVisitCallStmt',          'afterVisitCallStmt',
-        'beforeVisitIfStmt',            'afterVisitIfStmt',
-        'beforeVisitElsIfStmt',         'afterVisitElsIfStmt',
-        'beforeVisitElseStmt',          'afterVisitElseStmt',
-        'beforeVisitWhileStmt',         'afterVisitWhileStmt',
-        'beforeVisitForStmt',           'afterVisitForStmt',
-        'beforeVisitForEachStmt',       'afterVisitForEachStmt',
-        'beforeVisitTryStmt',           'afterVisitTryStmt',
-        'beforeVisitExceptStmt',        'afterVisitExceptStmt',
-        'beforeVisitGotoStmt',          #'afterVisitGotoStmt',
-        'beforeVisitLabelStmt',         #'afterVisitLabelStmt',
-        'beforeVisitPrepIfInst',        'afterVisitPrepIfInst',
-        'beforeVisitPrepElsIfInst',     'afterVisitPrepElsIfInst',
-        'beforeVisitPrepElseInst',      #'afterVisitPrepElseInst',
-        'beforeVisitPrepEndIfInst',     #'afterVisitPrepEndIfInst',
-        'beforeVisitPrepRegionInst',    #'afterVisitPrepRegionInst',
-        'beforeVisitPrepEndRegionInst', #'afterVisitPrepEndRegionInst',
-        'beforeVisitPrepExpr',          'afterVisitPrepExpr',
-        'beforeVisitPrepBinaryExpr',    'afterVisitPrepBinaryExpr',
-        'beforeVisitPrepNotExpr',       'afterVisitPrepNotExpr',
-        'beforeVisitPrepSymExpr',       #'afterVisitPrepSymExpr',
-        'beforeVisitPrepParenExpr',     'afterVisitPrepParenExpr',
-    ]
-
     def __init__(self, plugins):
+
+        methods = [func for func in dir(self)
+                            if callable(getattr(self, func))
+                                and (func.startswith("beforeVisit")
+                                     or func.startswith("afterVisit"))]
 
         self.hooks = {}
 
-        for name in self.methods:
+        for name in methods:
             hooks = []
             self.hooks[name] = hooks
             for plugin in plugins:
