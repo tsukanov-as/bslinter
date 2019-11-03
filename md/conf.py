@@ -7,8 +7,10 @@ from decimal import Decimal
 from enum import EnumMeta
 
 import md.enums as enums
+from md.visitor import Visitor
 
 import xml.etree.ElementTree as ET
+import os.path
 
 class XML:
 
@@ -69,6 +71,27 @@ class XML:
         if meta := self.__annotations__.get('_text'):
             setattr(self, '_text', item.text)
 
+    def visit(self, visitor: Visitor):
+        pass
+
+
+class XMLFile(XML):
+
+    def __init__(self, path: Optional[str] = None):
+        if path is not None:
+            self.__path__ = path
+            self.unmarshal_file(path)
+
+    def unmarshal_file(self, path):
+        tree = ET.ElementTree(file=str(path))
+        root = tree.getroot()
+        assert root.tag == '{http://v8.1c.ru/8.3/MDClasses}MetaDataObject'
+        assert len(root) == 1
+        self.unmarshal(root[0])
+
+    def walk(self, visitor: Visitor):
+        self.visit(visitor)
+
 #region basic
 
 Uuid = str
@@ -83,9 +106,18 @@ class LocalStringTypeItem(XML):
     lang:    Optional[str]
     content: Optional[str]
 
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitLocalStringTypeItem(self)
+
 class LocalStringType(XML):
     item: List[LocalStringTypeItem]
 
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitLocalStringType(self)
+        if self.item is not None:
+            for item in self.item:
+                item.visit(visitor)
+        visitor.afterVisitLocalStringType(self)
 
 class MDListTypeItem(XML):
     type:  Optional[str]
@@ -1011,9 +1043,21 @@ class CommonModuleProperties(XML):
     Privileged:                Optional[enums.Bool]
     ReturnValuesReuse:         Optional[enums.ReturnValuesReuse]
 
-class CommonModule(XML):
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitCommonModuleProperties(self)
+        if self.Synonym is not None:
+            self.Synonym.visit(visitor)
+        visitor.afterVisitCommonModuleProperties(self)
+
+class CommonModule(XMLFile):
     uuid:       Optional[str]
     Properties: Optional[CommonModuleProperties]
+
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitCommonModule(self)
+        if self.Properties is not None:
+            self.Properties.visit(visitor)
+        visitor.afterVisitCommonModule(self)
 
 class CommonPictureProperties(XML):
     Name:    Optional[str]
@@ -1080,6 +1124,12 @@ class ConfigurationProperties(XML):
     #UsePurposes  "FixedArray"
     #RequiredMobileApplicationPermissions  "FixedMap"
 
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitConfigurationProperties(self)
+        if self.Synonym is not None:
+            self.Synonym.visit(visitor)
+        visitor.afterVisitConfigurationProperties(self)
+
 class ConfigurationChildObjects(XML):
     AccountingRegister:         List[str]
     AccumulationRegister:       List[str]
@@ -1127,10 +1177,36 @@ class ConfigurationChildObjects(XML):
     WSReference:                List[str]
     XDTOPackage:                List[str]
 
-class Configuration(XML):
+class Configuration(XMLFile):
     uuid:         Optional[str]
     Properties:   Optional[ConfigurationProperties]
     ChildObjects: Optional[ConfigurationChildObjects]
+
+    def walk(self, visitor: Visitor):
+
+        if self.Properties is not None:
+            self.Properties.visit(visitor)
+
+        dirname = os.path.dirname(self.__path__)
+
+        if self.ChildObjects is not None:
+
+            # CommonModules
+
+            names = self.ChildObjects.CommonModule
+            if names is not None:
+                subdirname = os.path.join(dirname, 'CommonModules')
+                for name in names:
+                    path = os.path.join(subdirname, name + '.xml')
+                    node = CommonModule(path)
+                    node.walk(visitor)
+
+
+    def visit(self, visitor: Visitor):
+        visitor.beforeVisitConfiguration(self)
+        if self.Properties is not None:
+            self.Properties.visit(visitor)
+        visitor.afterVisitConfiguration(self)
 
 class ConstantProperties(XML):
     Name:                  Optional[str]
