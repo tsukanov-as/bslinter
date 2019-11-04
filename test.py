@@ -9,6 +9,7 @@ import bsl.ast as ast
 import xml.etree.ElementTree as ET
 import md.conf as cf
 import md.forms as fm
+from md.base import XMLParser
 
 import time
 import pathlib
@@ -85,18 +86,13 @@ def main():
     for path in result:
         if path:
             if str(path).endswith('Form.xml'):
-                tree = ET.ElementTree(file=str(path))
-                root = tree.getroot()
-                form = fm.ManagedForm()
-                form.unmarshal(root)
-            elif not str(path).endswith('Template.xml'):
-                tree = ET.ElementTree(file=str(path))
-                root = tree.getroot()
-                doc = cf.MetaDataObject()
-                doc.unmarshal(root)
+                _ = XMLParser(str(path), fm.Root).parse()
+            elif (not str(path).endswith('Template.xml')
+                    and not str(path).endswith('ConfigDumpInfo.xml')):
+                _ = XMLParser(str(path), cf.Root).parse()
             pass
 
-    print('metadata time: ', time.perf_counter() - strt) # 60 sec
+    print('metadata time: ', time.perf_counter() - strt) # 65 sec
 
 
 if __name__ == "__main__":

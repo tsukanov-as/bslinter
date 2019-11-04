@@ -9,7 +9,7 @@ class EnumBase(Enum):
     @classmethod
     def get(cls, key):
         # pylint: disable=no-member
-        return cls._member_map_.get(key.upper())
+        return cls._member_map_.get(key.upper())  # TODO: кидать исключение если значение не найдено
 
 class Bool(EnumBase):
     TRUE = auto()

@@ -1,6 +1,7 @@
 /.mypy_cache/
 /.pytest_cache/
 __pycache__
+/.vscode/.ropeproject/
 *.xml
 *.txt
 sandbox.py

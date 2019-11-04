@@ -2,77 +2,13 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from typing import List, Optional, TypeVar
-from typing import ForwardRef # type: ignore
+from typing import List, Optional
 from decimal import Decimal
 from enum import EnumMeta
 
 from md.conf import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks
-from md.conf import XML as BaseXML
+from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
 import md.enums as enums
-
-import xml.etree.ElementTree as ET
-
-class XML(BaseXML):
-
-    def __getattr__(self, name):
-        return None
-
-    def getbasic(self, meta, name, item, raw):
-        if type(meta) == type:
-            if issubclass(meta, BaseXML):
-                value = meta()
-                value.unmarshal(item)
-                return value
-            else:
-                value = meta(raw)
-                return value
-        elif type(meta) == EnumMeta:
-            try:
-                value = meta.get(raw)
-                return value
-            except Exception as e:
-                print(f'значение перечисления {meta} не найдено {e}')
-        elif type(meta) == ForwardRef:
-            return self.getbasic(globals()[meta.__forward_arg__], name, item, raw)
-        else:
-            raise Exception('неизвестный тип')
-
-    def getval(self, meta, name, item, raw):
-        if meta._name == 'List':
-            c = meta.__args__[0]
-            value = getattr(self, name) or []
-            value.append(self.getbasic(c, name, item, raw))
-            return value
-        elif meta._name is None:
-            c = meta.__args__[0]
-            value = self.getbasic(c, name, item, raw)
-            return value
-        else:
-            raise Exception('неизвестный тип')
-
-    def unmarshal(self, item: ET.Element):
-        for attr in item.attrib:
-            name = attr
-            if name[0] == '{':
-                if (i := name.find('}')) >= 0:
-                    name = name[i+1:]
-            # pylint: disable=no-member
-            if meta := self.__annotations__.get(name):
-                value = self.getval(meta, name, item, item.attrib[attr])
-                setattr(self, name, value)
-        for child in item:
-            name = child.tag
-            if name[0] == '{':
-                if (i := name.find('}')) >= 0:
-                    name = name[i+1:]
-            # pylint: disable=no-member
-            if meta := self.__annotations__.get(name):
-                value = self.getval(meta, name, child, child.text)
-                setattr(self, name, value)
-        # pylint: disable=no-member
-        if meta := self.__annotations__.get('_text'):
-            setattr(self, '_text', item.text)
 
 DateTime = str
 FormItemRef = str
@@ -83,7 +19,7 @@ CommandSourceName = str
 
 #region Other
 
-class Font(XML):
+class Font(XMLData):
     ref:       Optional[str] # StyleRef
     faceName:  Optional[str]
     height:    Optional[Decimal]
@@ -95,32 +31,32 @@ class Font(XML):
     scale:     Optional[Decimal]
 
 
-class Border(XML):
+class Border(XMLData):
     ref:   Optional[str]  #StyleRef
     style: Optional[str]  #BorderType
     width: Optional[Decimal] #unsignedInt
 
 
-class StandardPeriod(XML):
+class StandardPeriod(XMLData):
     variant:   Optional[enums.StandardPeriodVariant]
     startDate: Optional[DateTime]
     endDate:   Optional[DateTime]
 
-class ValueListItem(XML):
+class ValueListItem(XMLData):
     Presentation: Optional[str]
     CheckState:   Optional[Decimal]
     #Value ValueListItem
 
-class ValueList(XML):
+class ValueList(XMLData):
     Item: List[ValueListItem]
 
 
-class FormattedStringType(XML):
+class FormattedStringType(XMLData):
     item:      List[LocalStringTypeItem]
     formatted: Optional[enums.Bool]
 
 
-class Picture(XML):
+class Picture(XMLData):
     url: Optional[str]
     ref: Optional[str] #PictureRef
     t:   Optional[enums.Bool]
@@ -133,34 +69,34 @@ class Picture(XML):
     _text:   Optional[base64Binary]
 
 
-class ChoiceParameter(XML):  # TODO: сделать
+class ChoiceParameter(XMLData):  # TODO: сделать
     choiceParameter: Optional[str]
     #value ""; # ChoiceParameter()
 
-class ChoiceParameters(XML):
+class ChoiceParameters(XMLData):
     item: List[ChoiceParameter]
 
 
-class ItemTypeLink(XML):
+class ItemTypeLink(XMLData):
     DataPath: Optional[str]
     LinkItem: Optional[Decimal]
 
-class AdjustableBooleanItemType(XML):
+class AdjustableBooleanItemType(XMLData):
     name: Optional[MDObjectRef]
     _text:    Optional[enums.Bool]
 
-class AdjustableBoolean(XML):
+class AdjustableBoolean(XMLData):
     Common: List[bool]
     Value:  List[AdjustableBooleanItemType]
 
-class CommandsContent(XML):
+class CommandsContent(XMLData):
     ExcludedCommand: List[str]
 
 #endregion Other
 
 #region Form
 
-class AutoCommandBar(XML):
+class AutoCommandBar(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -199,7 +135,7 @@ class AutoCommandBar(XML):
     HorizontalAlign: Optional[enums.ItemHorizontalAlignment]
     Autofill:        Optional[enums.Bool]
 
-class ContextMenu(XML):
+class ContextMenu(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -237,7 +173,7 @@ class ContextMenu(XML):
     # this
     Autofill: Optional[enums.Bool]
 
-class ManagedForm(XML):
+class ManagedForm(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -298,12 +234,12 @@ class ManagedForm(XML):
 
 #region Events
 
-class FormItemEvent(XML):
+class FormItemEvent(XMLData):
     name:     Optional[str]
     callType: Optional[enums.HandlerCallType]
     _text:    Optional[str]
 
-class FormItemEvents(XML):
+class FormItemEvents(XMLData):
     Event: List[FormItemEvent]
 
 #endregion Events
@@ -312,10 +248,10 @@ class FormItemEvents(XML):
 
 #region Columns
 
-class FunctionalOptions(XML):
+class FunctionalOptions(XMLData):
     Item: List[MDObjectRef]
 
-class FormAttributeColumn(XML):
+class FormAttributeColumn(XMLData):
     name:              Optional[str]
     id:                Optional[Decimal]
     Title:             Optional[LocalStringType]
@@ -324,20 +260,20 @@ class FormAttributeColumn(XML):
     FillCheck:         Optional[enums.FillChecking]
     FunctionalOptions: Optional[FunctionalOptions]
 
-class FormAttributeAdditionalColumns(XML):
+class FormAttributeAdditionalColumns(XMLData):
     table:  List[LFEDataPath]
     Column: List[FormAttributeColumn]
 
-class FormAttributeColumns(XML):
+class FormAttributeColumns(XMLData):
     Column:            List[FormAttributeColumn]
     AdditionalColumns: List[FormAttributeAdditionalColumns]
 
 #endregion Columns
 
-class ContentType(XML):
+class ContentType(XMLData):
     Field: List[LFEDataPath]
 
-class FormAttribute(XML):
+class FormAttribute(XMLData):
     name:              Optional[str]
     id:                Optional[Decimal]
     Type:              Optional[TypeDescription]
@@ -353,7 +289,7 @@ class FormAttribute(XML):
     Columns:           Optional[FormAttributeColumns]
     #Settings ""; # FormAttribute()
 
-class FormAttributes(XML):
+class FormAttributes(XMLData):
     Attribute: List[FormAttribute]
     # Items["ConditionalAppearance"] = "ConditionalAppearance";
 
@@ -361,11 +297,11 @@ class FormAttributes(XML):
 
 #region Commands
 
-class FormCommandAction(XML):
+class FormCommandAction(XMLData):
     callType: Optional[enums.HandlerCallType]
     _text:    Optional[str]
 
-class FormCommand(XML):
+class FormCommand(XMLData):
     name:                     Optional[str]
     id:                       Optional[Decimal]
     Title:                    Optional[LocalStringType]
@@ -380,14 +316,14 @@ class FormCommand(XML):
     CurrentRowUse:            Optional[enums.CurrentRowUse]
     AssociatedTableElementId: Optional[str] #Optional[Decimal]
 
-class FormCommands(XML):
+class FormCommands(XMLData):
     Command: List[FormCommand]
 
 #endregion Commands
 
 #region CommandInterface
 
-class FormCommandInterfaceItem(XML):
+class FormCommandInterfaceItem(XMLData):
     Command:        Optional[str]
     Type:           Optional[enums.CommandKind]
     Attribute:      Optional[LFEDataPath]
@@ -396,10 +332,10 @@ class FormCommandInterfaceItem(XML):
     DefaultVisible: Optional[enums.Bool]
     Visible:        Optional[AdjustableBoolean]
 
-class FormCommandInterfaceItems(XML):
+class FormCommandInterfaceItems(XMLData):
     Item: List[FormCommandInterfaceItem]
 
-class FormCommandInterface(XML):
+class FormCommandInterface(XMLData):
     NavigationPanel: Optional[FormCommandInterfaceItems]
     CommandBar:      Optional[FormCommandInterfaceItems]
 
@@ -407,23 +343,23 @@ class FormCommandInterface(XML):
 
 #region Parameters
 
-class FormParameter(XML):
+class FormParameter(XMLData):
     name:         Optional[str]
     Type:         Optional[TypeDescription]
     KeyParameter: Optional[enums.Bool]
 
-class FormParameters(XML):
+class FormParameters(XMLData):
     Parameter: List[FormParameter]
 
 #endregion Parameters
 
 #region Addition
 
-class AdditionSource(XML):
+class AdditionSource(XMLData):
     Item: Optional[str]
     Type: Optional[enums.LogFormElementAdditionKind]
 
-class SearchControlAddition(XML):
+class SearchControlAddition(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -464,7 +400,7 @@ class SearchControlAddition(XML):
     Font:              Optional[Font]
 
 
-class SearchStringAddition(XML):
+class SearchStringAddition(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -504,7 +440,7 @@ class SearchStringAddition(XML):
     BorderColor:       Optional[Color]
     Font:              Optional[Font]
 
-class ViewStatusAddition(XML):
+class ViewStatusAddition(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -553,20 +489,47 @@ class ViewStatusAddition(XML):
 
 #region ChildItems
 
-class ChildItems(XML):
+class ChildItems(OrderedXMLData):
+    """
+    Экземпляры этого класса являются списками элементов.
+    """
+    AutoCommandBar:           Optional['AutoCommandBar']
+    Button:                   Optional['Button']
+    ButtonGroup:              Optional['ButtonGroup']
+    CalendarField:            Optional['CalendarField']
+    ChartField:               Optional['ChartField']
+    CheckBoxField:            Optional['CheckBoxField']
+    ColumnGroup:              Optional['ColumnGroup']
+    CommandBar:               Optional['CommandBar']
+    ContextMenu:              Optional['ContextMenu']
+    DendrogramField:          Optional['DendrogramField']
+    FormattedDocumentField:   Optional['FormattedDocumentField']
+    GanttChartField:          Optional['GanttChartField']
+    GeographicalSchemaField:  Optional['GeographicalSchemaField']
+    GraphicalSchemaField:     Optional['GraphicalSchemaField']
+    HTMLDocumentField:        Optional['HTMLDocumentField']
+    InputField:               Optional['InputField']
+    LabelDecoration:          Optional['LabelDecoration']
+    LabelField:               Optional['LabelField']
+    Page:                     Optional['Page']
+    Pages:                    Optional['Pages']
+    PeriodField:              Optional['PeriodField']
+    PictureDecoration:        Optional['PictureDecoration']
+    PictureField:             Optional['PictureField']
+    PlannerField:             Optional['PlannerField']
+    Popup:                    Optional['Popup']
+    ProgressBarField:         Optional['ProgressBarField']
+    RadioButtonField:         Optional['RadioButtonField']
+    SearchControlAddition:    Optional['SearchControlAddition']
+    SearchStringAddition:     Optional['SearchStringAddition']
+    SpreadSheetDocumentField: Optional['SpreadSheetDocumentField']
+    Table:                    Optional['Table']
+    TextDocumentField:        Optional['TextDocumentField']
+    TrackBarField:            Optional['TrackBarField']
+    UsualGroup:               Optional['UsualGroup']
+    ViewStatusAddition:       Optional['ViewStatusAddition']
 
-    def unmarshal(self, item: ET.Element):
-        items = []
-        for child in item:
-            name = child.tag
-            if name[0] == '{':
-                if (i := name.find('}')) >= 0:
-                    name = name[i+1:]
-            value = self.getbasic(globals()[name], name, child, child.text)
-            items.append(value)
-        self.Items = items
-
-class Button(XML):
+class Button(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -622,7 +585,7 @@ class Button(XML):
     #Parameter: bool
 
 
-class ButtonGroup(XML):
+class ButtonGroup(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -662,7 +625,7 @@ class ButtonGroup(XML):
     PlacementArea:  Optional[enums.MenuElementPlacementArea]
     Representation: Optional[enums.ButtonGroupRepresentation]
 
-class CalendarField(XML):
+class CalendarField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -743,7 +706,7 @@ class CalendarField(XML):
     HeightInMonths:              Optional[Decimal]
 
 
-class ChartField(XML):
+class ChartField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -811,7 +774,7 @@ class ChartField(XML):
     VerticalStretch:   Optional[enums.Bool]
 
 
-class CheckBoxField(XML):
+class CheckBoxField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -881,7 +844,7 @@ class CheckBoxField(XML):
     EqualItemsWidth: Optional[enums.BWAValue]
 
 
-class ColumnGroup(XML):
+class ColumnGroup(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -928,7 +891,7 @@ class ColumnGroup(XML):
     FixingInTable:         Optional[enums.FormFixedInTable]
 
 
-class CommandBar(XML):
+class CommandBar(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -967,7 +930,7 @@ class CommandBar(XML):
     HorizontalLocation: Optional[enums.ItemHorizontalAlignment]
     CommandSource:      Optional[CommandSourceName]
 
-class DendrogramField(XML):
+class DendrogramField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1035,7 +998,7 @@ class DendrogramField(XML):
     VerticalStretch:   Optional[enums.Bool]
 
 
-class FormattedDocumentField(XML):
+class FormattedDocumentField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1108,7 +1071,7 @@ class FormattedDocumentField(XML):
     Font:              Optional[Font]
 
 
-class GanttChartField(XML):
+class GanttChartField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1176,7 +1139,7 @@ class GanttChartField(XML):
     VerticalStretch:   Optional[enums.Bool]
 
 
-class GeographicalSchemaField(XML):
+class GeographicalSchemaField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1246,7 +1209,7 @@ class GeographicalSchemaField(XML):
     BorderColor:       Optional[Color]
 
 
-class GraphicalSchemaField(XML):
+class GraphicalSchemaField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1317,7 +1280,7 @@ class GraphicalSchemaField(XML):
     BorderColor:       Optional[Color]
 
 
-class HTMLDocumentField(XML):
+class HTMLDocumentField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1387,7 +1350,7 @@ class HTMLDocumentField(XML):
     BorderColor:       Optional[Color]
 
 
-class InputField(XML):
+class InputField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1505,7 +1468,7 @@ class InputField(XML):
     #MaxValue MDObjectRef
 
 
-class LabelDecoration(XML):
+class LabelDecoration(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1554,7 +1517,7 @@ class LabelDecoration(XML):
     Border:          Optional[Border]
 
 
-class LabelField(XML):
+class LabelField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1631,7 +1594,7 @@ class LabelField(XML):
     Font:              Optional[Font]
 
 
-class Page(XML):
+class Page(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1682,7 +1645,7 @@ class Page(XML):
     ScrollOnCompress:  Optional[enums.Bool]
 
 
-class Pages(XML):
+class Pages(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1721,7 +1684,7 @@ class Pages(XML):
     PagesRepresentation: Optional[enums.FormPagesRepresentation]
 
 
-class PeriodField(XML):
+class PeriodField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1792,7 +1755,7 @@ class PeriodField(XML):
     Border:            Optional[Border]
 
 
-class PictureDecoration(XML):
+class PictureDecoration(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1843,7 +1806,7 @@ class PictureDecoration(XML):
     BorderColor:            Optional[Color]
 
 
-class PictureField(XML):
+class PictureField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1922,7 +1885,7 @@ class PictureField(XML):
     Font:                   Optional[Font]
 
 
-class PlannerField(XML):
+class PlannerField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -1992,7 +1955,7 @@ class PlannerField(XML):
     EnableDrag:        Optional[enums.Bool]
 
 
-class Popup(XML):
+class Popup(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2038,7 +2001,7 @@ class Popup(XML):
     BorderColor:         Optional[Color]
 
 
-class ProgressBarField(XML):
+class ProgressBarField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2112,7 +2075,7 @@ class ProgressBarField(XML):
     BorderColor:       Optional[Color]
 
 
-class RadioButtonField(XML):
+class RadioButtonField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2181,7 +2144,7 @@ class RadioButtonField(XML):
     BackColor:         Optional[Color]
     BorderColor:       Optional[Color]
 
-class SpreadSheetDocumentField(XML):
+class SpreadSheetDocumentField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2266,7 +2229,7 @@ class SpreadSheetDocumentField(XML):
     PointerType:           Optional[enums.SpreadsheetDocumentPointerType]
 
 
-class Table(XML):
+class Table(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2367,7 +2330,7 @@ class Table(XML):
     #RowFilter enums.UpdateOnDataChange
 
 
-class TextDocumentField(XML):
+class TextDocumentField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2440,7 +2403,7 @@ class TextDocumentField(XML):
     Font:              Optional[Font]
 
 
-class TrackBarField(XML):
+class TrackBarField(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2516,7 +2479,7 @@ class TrackBarField(XML):
     BorderColor:       Optional[Color]
 
 
-class UsualGroup(XML):
+class UsualGroup(XMLData):
 
     # FormVisualEntity
     ContextMenu:           Optional['ContextMenu']
@@ -2574,4 +2537,9 @@ class UsualGroup(XML):
 
 #endregion ChildItems
 
+class Root(XMLFile):
+    Form: Optional[ManagedForm]
+
 #endregion Form
+
+fill_types(globals())

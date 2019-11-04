@@ -6,7 +6,7 @@ from abc import abstractmethod
 
 class Plugin:
 
-    # TODO: плагину должны быть известны путь к файлу и путь внутри файла
+    # TODO: плагину должны быть известны путь к файлу и позиция внутри файла
 
     def __init__(self, path: str):
         pass
