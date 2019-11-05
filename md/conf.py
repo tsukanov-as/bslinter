@@ -10,34 +10,17 @@ import md.enums as enums
 from md.visitor import Visitor
 from md.base import XMLData, XMLFile, XMLParser, fill_types
 
+from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
+import md.forms as fm
+
 import os.path
 
 #region basic
 
-Uuid = str
 DataPath = str
-MDObjectRef = str
 MDMethodRef = str
 FieldRef = str
 IncludeInCommandCategoriesType = str
-QName = str
-
-class LocalStringTypeItem(XMLData):
-    lang:    Optional[str]
-    content: Optional[str]
-
-    def visit(self, visitor: Visitor):
-        visitor.visit_LocalStringTypeItem(self)
-
-class LocalStringType(XMLData):
-    item: List[LocalStringTypeItem]
-
-    def visit(self, visitor: Visitor):
-        visitor.visit_LocalStringType(self)
-        if self.item is not None:
-            for item in self.item:
-                item.visit(visitor)
-        visitor.leave_LocalStringType(self)
 
 class MDListTypeItem(XMLData):
     type:  Optional[str]
@@ -55,16 +38,6 @@ class FieldListItem(XMLData):
 
 class FieldList(XMLData):
     Field: Optional[FieldListItem]
-
-
-class ChoiceParameterLink(XMLData):
-    Name:        Optional[str]
-    DataPath:    Optional[str]
-    ValueChange: Optional[enums.LinkedValueChangeMode]
-
-
-class ChoiceParameterLinks(XMLData):
-    Link: List[ChoiceParameterLink]
 
 
 class TypeLink(XMLData):
@@ -109,8 +82,32 @@ class StandardAttribute(XMLData):
     #MinValue
     #MaxValue
 
+    _subnodes = [
+        'Synonym',
+        'ToolTip',
+        'FillValue',
+        'ChoiceParameterLinks',
+        'LinkByType',
+        'Format',
+        'EditFormat',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_StandardAttribute(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_StandardAttribute(self)
+
 class StandardAttributes(XMLData):
     StandardAttribute: List[StandardAttribute]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_StandardAttributes(self)
+        if nodes := self.StandardAttribute:
+            for node in nodes:
+                node.visit(visitor)
+        visitor.leave_StandardAttributes(self)
 
 class StandardTabularSection(XMLData):
     name:               Optional[str]
@@ -140,38 +137,9 @@ class Characteristic(XMLData):
     CharacteristicValues: Optional[CharacteristicValues]
 
 class Characteristics(XMLData):
-    Characteristic: Optional[Characteristic]
+    Characteristic: List[Characteristic]
 
 #endregion standard
-
-#region types
-
-class NumberQualifiers(XMLData):
-    Digits:         Optional[Decimal]
-    FractionDigits: Optional[Decimal]
-    AllowedSign:    Optional[enums.AllowedSign]
-
-class StringQualifiers(XMLData):
-    Length:        Optional[Decimal]
-    AllowedLength: Optional[enums.AllowedLength]
-
-class DateQualifiers(XMLData):
-    DateFractions: Optional[enums.DateFractions]
-
-class BinaryDataQualifiers(XMLData):
-    Length:        Optional[Decimal]
-    AllowedLength: Optional[enums.AllowedLength]
-
-class TypeDescription(XMLData):
-    Type:                 Optional[QName]
-    TypeSet:              Optional[QName]
-    TypeId:               Optional[Uuid]
-    NumberQualifiers:     Optional[NumberQualifiers]
-    StringQualifiers:     Optional[StringQualifiers]
-    DateQualifiers:       Optional[DateQualifiers]
-    BinaryDataQualifiers: Optional[BinaryDataQualifiers]
-
-#endregion types
 
 #region children
 
@@ -403,9 +371,37 @@ class FormProperties(XMLData):
     ExtendedPresentation:  Optional[LocalStringType]
     #UsePurposes  "FixedArray"
 
+    _subnodes = [
+        'Synonym',
+        'ExtendedPresentation',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_FormProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        self.visit_ManagedForm(visitor)
+        visitor.leave_FormProperties(self)
+
+    def visit_ManagedForm(self, visitor: Visitor):
+        if self.Name:
+            dirname = self._path.rsplit('.')[0]
+            path = os.path.join(dirname, 'Ext/Form.xml')
+            node: fm.Root = XMLParser(path, fm.Root).parse()
+            form: Optional[fm.ManagedForm] = node.ManagedForm
+            if form:
+                form.visit(visitor)
+
 class Form(XMLData):
     uuid:       Optional[str]
     Properties: Optional[FormProperties]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_Form(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Form(self)
 
 class Template(XMLData):
     uuid:         Optional[str]
@@ -1097,37 +1093,45 @@ class ConfigurationChildObjects(XMLData):
     WSReference:                List[str]
     XDTOPackage:                List[str]
 
+    def visit(self, visitor: Visitor):
+        visitor.visit_ConfigurationChildObjects(self)
+        self.visit_CommonModules(visitor)
+        self.visit_Documents(visitor)
+        visitor.leave_ConfigurationChildObjects(self)
+
+    def visit_CommonModules(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.CommonModule:
+            subdirname = os.path.join(dirname, 'CommonModules')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo is not None and mdo.CommonModule is not None:
+                    mdo.CommonModule.visit(visitor)
+
+    def visit_Documents(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.Document:
+            subdirname = os.path.join(dirname, 'Documents')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo is not None and mdo.Document is not None:
+                    mdo.Document.visit(visitor)
+
 class Configuration(XMLFile):
     uuid:         Optional[str]
     Properties:   Optional[ConfigurationProperties]
     ChildObjects: Optional[ConfigurationChildObjects]
 
-    def walk(self, visitor: Visitor):
-
-        if self.Properties is not None:
-            self.Properties.visit(visitor)
-
-        dirname = os.path.dirname(self._path)
-
-        if self.ChildObjects is not None:
-
-            # CommonModules
-
-            names = self.ChildObjects.CommonModule
-            if names is not None:
-                subdirname = os.path.join(dirname, 'CommonModules')
-                for name in names:
-                    path = os.path.join(subdirname, name + '.xml')
-                    node: Root = XMLParser(path, Root).parse()
-                    mdo: Optional[MetaDataObject] = node.MetaDataObject
-                    if mdo is not None and mdo.CommonModule is not None:
-                        mdo.CommonModule.walk(visitor)
-
-
     def visit(self, visitor: Visitor):
         visitor.visit_Configuration(self)
-        if self.Properties is not None:
+        if self.Properties:
             self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
         visitor.leave_Configuration(self)
 
 class ConstantProperties(XMLData):
@@ -1232,6 +1236,28 @@ class DocumentProperties(XMLData):
     ChoiceHistoryOnInput:             Optional[enums.ChoiceHistoryOnInput]
     DataHistory:                      Optional[enums.DataHistoryUse]
 
+    _subnodes = [
+        'Synonym',
+        'StandardAttributes',
+        'Characteristics',
+        'BasedOn',
+        'InputByString',
+        'RegisterRecords',
+        'DataLockFields',
+        'ObjectPresentation',
+        'ExtendedObjectPresentation',
+        'ListPresentation',
+        'ExtendedListPresentation',
+        'Explanation',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_ConfigurationProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_ConfigurationProperties(self)
+
 class DocumentChildObjects(XMLData):
     Attribute:      List[Attribute]
     Form:           List[str]
@@ -1239,10 +1265,52 @@ class DocumentChildObjects(XMLData):
     Template:       List[str]
     Command:        List[Command]
 
-class Document(XMLData):
+    def visit(self, visitor: Visitor):
+        visitor.visit_DocumentChildObjects(self)
+        self.visit_Attributes(visitor)
+        self.visit_TabularSections(visitor)
+        self.visit_Commands(visitor)
+        self.visit_Forms(visitor)
+        visitor.leave_DocumentChildObjects(self)
+
+    def visit_Attributes(self, visitor):
+        if Attribute := self.Attribute:
+            for node in Attribute:
+                node.visit(visitor)
+
+    def visit_TabularSections(self, visitor):
+        if TabularSection := self.TabularSection:
+            for node in TabularSection:
+                node.visit(visitor)
+
+    def visit_Commands(self, visitor):
+        if Command := self.Command:
+            for node in Command:
+                node.visit(visitor)
+
+    def visit_Forms(self, visitor: Visitor):
+        dirname = self._path.rsplit('.')[0]
+        if names := self.Form:
+            subdirname = os.path.join(dirname, 'Forms')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo and mdo.Form:
+                    mdo.Form.visit(visitor)
+
+class Document(XMLFile):
     uuid:         Optional[str]
     Properties:   Optional[DocumentProperties]
     ChildObjects: Optional[DocumentChildObjects]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_Document(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
+        visitor.leave_Document(self)
 
 class DocumentJournalProperties(XMLData):
     Name:                     Optional[str]

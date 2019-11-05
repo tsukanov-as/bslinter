@@ -6,9 +6,10 @@ from typing import List, Optional
 from decimal import Decimal
 from enum import EnumMeta
 
-from md.conf import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks
+from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks
 from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
 import md.enums as enums
+from md.visitor import Visitor
 
 DateTime = str
 FormItemRef = str
@@ -231,6 +232,17 @@ class ManagedForm(XMLData):
     Parameters:                  Optional['FormParameters']
     CommandInterface:            Optional['FormCommandInterface']
     #BaseForm Form
+
+    _subnodes = [
+        'Title',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_ManagedForm(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_ManagedForm(self)
 
 #region Events
 

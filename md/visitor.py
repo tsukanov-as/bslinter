@@ -38,6 +38,8 @@ class Visitor:
             except Exception as e:
                 print(e)
 
+    #region conf
+
     # Configuration
 
     def visit_Configuration(self, node):
@@ -53,6 +55,14 @@ class Visitor:
 
     def leave_ConfigurationProperties(self, node):
         self.perform('leave_ConfigurationProperties', node)
+
+    # ConfigurationChildObjects
+
+    def visit_ConfigurationChildObjects(self, node):
+        self.perform('visit_ConfigurationChildObjects', node)
+
+    def leave_ConfigurationChildObjects(self, node):
+        self.perform('leave_ConfigurationChildObjects', node)
 
     # CommonModule
 
@@ -70,6 +80,22 @@ class Visitor:
     def leave_CommonModuleProperties(self, node):
         self.perform('leave_CommonModuleProperties', node)
 
+    # Document
+
+    def visit_Document(self, node):
+        self.perform('visit_Document', node)
+
+    def leave_Document(self, node):
+        self.perform('leave_Document', node)
+
+    # DocumentChildObjects
+
+    def visit_DocumentChildObjects(self, node):
+        self.perform('visit_DocumentChildObjects', node)
+
+    def leave_DocumentChildObjects(self, node):
+        self.perform('leave_DocumentChildObjects', node)
+
     # LocalStringType
 
     def visit_LocalStringType(self, node):
@@ -82,3 +108,49 @@ class Visitor:
 
     def visit_LocalStringTypeItem(self, node):
         self.perform('visit_LocalStringTypeItem', node)
+
+    # StandardAttribute
+
+    def visit_StandardAttribute(self, node):
+        self.perform('visit_StandardAttribute', node)
+
+    def leave_StandardAttribute(self, node):
+        self.perform('leave_StandardAttribute', node)
+
+    # StandardAttributes
+
+    def visit_StandardAttributes(self, node):
+        self.perform('visit_StandardAttributes', node)
+
+    def leave_StandardAttributes(self, node):
+        self.perform('leave_StandardAttributes', node)
+
+    # Form
+
+    def visit_Form(self, node):
+        self.perform('visit_Form', node)
+
+    def leave_Form(self, node):
+        self.perform('leave_Form', node)
+
+    # FormProperties
+
+    def visit_FormProperties(self, node):
+        self.perform('visit_FormProperties', node)
+
+    def leave_FormProperties(self, node):
+        self.perform('leave_FormProperties', node)
+
+    #endregion conf
+
+    #region forms
+
+    # ManagedForm
+
+    def visit_ManagedForm(self, node):
+        self.perform('visit_ManagedForm', node)
+
+    def leave_ManagedForm(self, node):
+        self.perform('leave_ManagedForm', node)
+
+    #endregion forms
