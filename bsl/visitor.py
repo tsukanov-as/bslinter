@@ -19,8 +19,8 @@ class Visitor:
 
         methods = [func for func in dir(self)
                             if callable(getattr(self, func))
-                                and (func.startswith("beforeVisit")
-                                     or func.startswith("afterVisit"))]
+                                and (func.startswith("visit_")
+                                     or func.startswith("leave_"))]
 
         self.hooks = {}
 
@@ -40,338 +40,338 @@ class Visitor:
 
     # Module
 
-    def beforeVisitModule(self, node):
-        self.perform('beforeVisitModule', node)
+    def visit_Module(self, node):
+        self.perform('visit_Module', node)
 
-    def afterVisitModule(self, node):
-        self.perform('afterVisitModule', node)
+    def leave_Module(self, node):
+        self.perform('leave_Module', node)
 
     # VarModListDecl
 
-    def beforeVisitVarModListDecl(self, node):
-        self.perform('beforeVisitVarModListDecl', node)
+    def visit_VarModListDecl(self, node):
+        self.perform('visit_VarModListDecl', node)
 
-    def afterVisitVarModListDecl(self, node):
-        self.perform('afterVisitVarModListDecl', node)
+    def leave_VarModListDecl(self, node):
+        self.perform('leave_VarModListDecl', node)
 
     # VarModDecl
 
-    def beforeVisitVarModDecl(self, node):
-        self.perform('beforeVisitVarModDecl', node)
+    def visit_VarModDecl(self, node):
+        self.perform('visit_VarModDecl', node)
 
     # VarLocDecl
 
-    def beforeVisitVarLocDecl(self, node):
-        self.perform('beforeVisitVarLocDecl', node)
+    def visit_VarLocDecl(self, node):
+        self.perform('visit_VarLocDecl', node)
 
     # AutoDecl
 
-    def beforeVisitAutoDecl(self, node):
-        self.perform('beforeVisitAutoDecl', node)
+    def visit_AutoDecl(self, node):
+        self.perform('visit_AutoDecl', node)
 
     # ParamDecl
 
-    def beforeVisitParamDecl(self, node):
-        self.perform('beforeVisitParamDecl', node)
+    def visit_ParamDecl(self, node):
+        self.perform('visit_ParamDecl', node)
 
-    def afterVisitParamDecl(self, node):
-        self.perform('afterVisitParamDecl', node)
+    def leave_ParamDecl(self, node):
+        self.perform('leave_ParamDecl', node)
 
     # MethodDecl
 
-    def beforeVisitMethodDecl(self, node):
-        self.perform('beforeVisitMethodDecl', node)
+    def visit_MethodDecl(self, node):
+        self.perform('visit_MethodDecl', node)
 
-    def afterVisitMethodDecl(self, node):
-        self.perform('afterVisitMethodDecl', node)
+    def leave_MethodDecl(self, node):
+        self.perform('leave_MethodDecl', node)
 
     # ProcSign
 
-    def beforeVisitProcSign(self, node):
-        self.perform('beforeVisitProcSign', node)
+    def visit_ProcSign(self, node):
+        self.perform('visit_ProcSign', node)
 
-    def afterVisitProcSign(self, node):
-        self.perform('afterVisitProcSign', node)
+    def leave_ProcSign(self, node):
+        self.perform('leave_ProcSign', node)
 
     # FuncSign
 
-    def beforeVisitFuncSign(self, node):
-        self.perform('beforeVisitFuncSign', node)
+    def visit_FuncSign(self, node):
+        self.perform('visit_FuncSign', node)
 
-    def afterVisitFuncSign(self, node):
-        self.perform('afterVisitFuncSign', node)
+    def leave_FuncSign(self, node):
+        self.perform('leave_FuncSign', node)
 
     # BasicLitExpr
 
-    def beforeVisitBasicLitExpr(self, node):
-        self.perform('beforeVisitBasicLitExpr', node)
+    def visit_BasicLitExpr(self, node):
+        self.perform('visit_BasicLitExpr', node)
 
     # FieldExpr
 
-    def beforeVisitFieldExpr(self, node):
-        self.perform('beforeVisitFieldExpr', node)
+    def visit_FieldExpr(self, node):
+        self.perform('visit_FieldExpr', node)
 
-    def afterVisitFieldExpr(self, node):
-        self.perform('afterVisitFieldExpr', node)
+    def leave_FieldExpr(self, node):
+        self.perform('leave_FieldExpr', node)
 
     # IndexExpr
 
-    def beforeVisitIndexExpr(self, node):
-        self.perform('beforeVisitIndexExpr', node)
+    def visit_IndexExpr(self, node):
+        self.perform('visit_IndexExpr', node)
 
-    def afterVisitIndexExpr(self, node):
-        self.perform('afterVisitIndexExpr', node)
+    def leave_IndexExpr(self, node):
+        self.perform('leave_IndexExpr', node)
 
     # IdentExpr
 
-    def beforeVisitIdentExpr(self, node):
-        self.perform('beforeVisitIdentExpr', node)
+    def visit_IdentExpr(self, node):
+        self.perform('visit_IdentExpr', node)
 
-    def afterVisitIdentExpr(self, node):
-        self.perform('afterVisitIdentExpr', node)
+    def leave_IdentExpr(self, node):
+        self.perform('leave_IdentExpr', node)
 
     # UnaryExpr
 
-    def beforeVisitUnaryExpr(self, node):
-        self.perform('beforeVisitUnaryExpr', node)
+    def visit_UnaryExpr(self, node):
+        self.perform('visit_UnaryExpr', node)
 
-    def afterVisitUnaryExpr(self, node):
-        self.perform('afterVisitUnaryExpr', node)
+    def leave_UnaryExpr(self, node):
+        self.perform('leave_UnaryExpr', node)
 
     # BinaryExpr
 
-    def beforeVisitBinaryExpr(self, node):
-        self.perform('beforeVisitBinaryExpr', node)
+    def visit_BinaryExpr(self, node):
+        self.perform('visit_BinaryExpr', node)
 
-    def afterVisitBinaryExpr(self, node):
-        self.perform('afterVisitBinaryExpr', node)
+    def leave_BinaryExpr(self, node):
+        self.perform('leave_BinaryExpr', node)
 
     # NewExpr
 
-    def beforeVisitNewExpr(self, node):
-        self.perform('beforeVisitNewExpr', node)
+    def visit_NewExpr(self, node):
+        self.perform('visit_NewExpr', node)
 
-    def afterVisitNewExpr(self, node):
-        self.perform('afterVisitNewExpr', node)
+    def leave_NewExpr(self, node):
+        self.perform('leave_NewExpr', node)
 
     # TernaryExpr
 
-    def beforeVisitTernaryExpr(self, node):
-        self.perform('beforeVisitTernaryExpr', node)
+    def visit_TernaryExpr(self, node):
+        self.perform('visit_TernaryExpr', node)
 
-    def afterVisitTernaryExpr(self, node):
-        self.perform('afterVisitTernaryExpr', node)
+    def leave_TernaryExpr(self, node):
+        self.perform('leave_TernaryExpr', node)
 
     # ParenExpr
 
-    def beforeVisitParenExpr(self, node):
-        self.perform('beforeVisitParenExpr', node)
+    def visit_ParenExpr(self, node):
+        self.perform('visit_ParenExpr', node)
 
-    def afterVisitParenExpr(self, node):
-        self.perform('afterVisitParenExpr', node)
+    def leave_ParenExpr(self, node):
+        self.perform('leave_ParenExpr', node)
 
     # NotExpr
 
-    def beforeVisitNotExpr(self, node):
-        self.perform('beforeVisitNotExpr', node)
+    def visit_NotExpr(self, node):
+        self.perform('visit_NotExpr', node)
 
-    def afterVisitNotExpr(self, node):
-        self.perform('afterVisitNotExpr', node)
+    def leave_NotExpr(self, node):
+        self.perform('leave_NotExpr', node)
 
     # StringExpr
 
-    def beforeVisitStringExpr(self, node):
-        self.perform('beforeVisitStringExpr', node)
+    def visit_StringExpr(self, node):
+        self.perform('visit_StringExpr', node)
 
-    def afterVisitStringExpr(self, node):
-        self.perform('afterVisitStringExpr', node)
+    def leave_StringExpr(self, node):
+        self.perform('leave_StringExpr', node)
 
     # AssignStmt
 
-    def beforeVisitAssignStmt(self, node):
-        self.perform('beforeVisitAssignStmt', node)
+    def visit_AssignStmt(self, node):
+        self.perform('visit_AssignStmt', node)
 
-    def afterVisitAssignStmt(self, node):
-        self.perform('afterVisitAssignStmt', node)
+    def leave_AssignStmt(self, node):
+        self.perform('leave_AssignStmt', node)
 
     # ReturnStmt
 
-    def beforeVisitReturnStmt(self, node):
-        self.perform('beforeVisitReturnStmt', node)
+    def visit_ReturnStmt(self, node):
+        self.perform('visit_ReturnStmt', node)
 
-    def afterVisitReturnStmt(self, node):
-        self.perform('afterVisitReturnStmt', node)
+    def leave_ReturnStmt(self, node):
+        self.perform('leave_ReturnStmt', node)
 
     # BreakStmt
 
-    def beforeVisitBreakStmt(self, node):
-        self.perform('beforeVisitBreakStmt', node)
+    def visit_BreakStmt(self, node):
+        self.perform('visit_BreakStmt', node)
 
     # ContinueStmt
 
-    def beforeVisitContinueStmt(self, node):
-        self.perform('beforeVisitContinueStmt', node)
+    def visit_ContinueStmt(self, node):
+        self.perform('visit_ContinueStmt', node)
 
     # RaiseStmt
 
-    def beforeVisitRaiseStmt(self, node):
-        self.perform('beforeVisitRaiseStmt', node)
+    def visit_RaiseStmt(self, node):
+        self.perform('visit_RaiseStmt', node)
 
-    def afterVisitRaiseStmt(self, node):
-        self.perform('afterVisitRaiseStmt', node)
+    def leave_RaiseStmt(self, node):
+        self.perform('leave_RaiseStmt', node)
 
     # ExecuteStmt
 
-    def beforeVisitExecuteStmt(self, node):
-        self.perform('beforeVisitExecuteStmt', node)
+    def visit_ExecuteStmt(self, node):
+        self.perform('visit_ExecuteStmt', node)
 
-    def afterVisitExecuteStmt(self, node):
-        self.perform('afterVisitExecuteStmt', node)
+    def leave_ExecuteStmt(self, node):
+        self.perform('leave_ExecuteStmt', node)
 
     # CallStmt
 
-    def beforeVisitCallStmt(self, node):
-        self.perform('beforeVisitCallStmt', node)
+    def visit_CallStmt(self, node):
+        self.perform('visit_CallStmt', node)
 
-    def afterVisitCallStmt(self, node):
-        self.perform('afterVisitCallStmt', node)
+    def leave_CallStmt(self, node):
+        self.perform('leave_CallStmt', node)
 
     # IfStmt
 
-    def beforeVisitIfStmt(self, node):
-        self.perform('beforeVisitIfStmt', node)
+    def visit_IfStmt(self, node):
+        self.perform('visit_IfStmt', node)
 
-    def afterVisitIfStmt(self, node):
-        self.perform('afterVisitIfStmt', node)
+    def leave_IfStmt(self, node):
+        self.perform('leave_IfStmt', node)
 
     # ElsIfStmt
 
-    def beforeVisitElsIfStmt(self, node):
-        self.perform('beforeVisitElsIfStmt', node)
+    def visit_ElsIfStmt(self, node):
+        self.perform('visit_ElsIfStmt', node)
 
-    def afterVisitElsIfStmt(self, node):
-        self.perform('afterVisitElsIfStmt', node)
+    def leave_ElsIfStmt(self, node):
+        self.perform('leave_ElsIfStmt', node)
 
     # ElseStmt
 
-    def beforeVisitElseStmt(self, node):
-        self.perform('beforeVisitElseStmt', node)
+    def visit_ElseStmt(self, node):
+        self.perform('visit_ElseStmt', node)
 
-    def afterVisitElseStmt(self, node):
-        self.perform('afterVisitElseStmt', node)
+    def leave_ElseStmt(self, node):
+        self.perform('leave_ElseStmt', node)
 
     # WhileStmt
 
-    def beforeVisitWhileStmt(self, node):
-        self.perform('beforeVisitWhileStmt', node)
+    def visit_WhileStmt(self, node):
+        self.perform('visit_WhileStmt', node)
 
-    def afterVisitWhileStmt(self, node):
-        self.perform('afterVisitWhileStmt', node)
+    def leave_WhileStmt(self, node):
+        self.perform('leave_WhileStmt', node)
 
     # ForStmt
 
-    def beforeVisitForStmt(self, node):
-        self.perform('beforeVisitForStmt', node)
+    def visit_ForStmt(self, node):
+        self.perform('visit_ForStmt', node)
 
-    def afterVisitForStmt(self, node):
-        self.perform('afterVisitForStmt', node)
+    def leave_ForStmt(self, node):
+        self.perform('leave_ForStmt', node)
 
     # ForEachStmt
 
-    def beforeVisitForEachStmt(self, node):
-        self.perform('beforeVisitForEachStmt', node)
+    def visit_ForEachStmt(self, node):
+        self.perform('visit_ForEachStmt', node)
 
-    def afterVisitForEachStmt(self, node):
-        self.perform('afterVisitForEachStmt', node)
+    def leave_ForEachStmt(self, node):
+        self.perform('leave_ForEachStmt', node)
 
     # TryStmt
 
-    def beforeVisitTryStmt(self, node):
-        self.perform('beforeVisitTryStmt', node)
+    def visit_TryStmt(self, node):
+        self.perform('visit_TryStmt', node)
 
-    def afterVisitTryStmt(self, node):
-        self.perform('afterVisitTryStmt', node)
+    def leave_TryStmt(self, node):
+        self.perform('leave_TryStmt', node)
 
     # ExceptStmt
 
-    def beforeVisitExceptStmt(self, node):
-        self.perform('beforeVisitExceptStmt', node)
+    def visit_ExceptStmt(self, node):
+        self.perform('visit_ExceptStmt', node)
 
-    def afterVisitExceptStmt(self, node):
-        self.perform('afterVisitExceptStmt', node)
+    def leave_ExceptStmt(self, node):
+        self.perform('leave_ExceptStmt', node)
 
     # GotoStmt
 
-    def beforeVisitGotoStmt(self, node):
-        self.perform('beforeVisitGotoStmt', node)
+    def visit_GotoStmt(self, node):
+        self.perform('visit_GotoStmt', node)
 
     # LabelStmt
 
-    def beforeVisitLabelStmt(self, node):
-        self.perform('beforeVisitLabelStmt', node)
+    def visit_LabelStmt(self, node):
+        self.perform('visit_LabelStmt', node)
 
     # PrepIfInst
 
-    def beforeVisitPrepIfInst(self, node):
-        self.perform('beforeVisitPrepIfInst', node)
+    def visit_PrepIfInst(self, node):
+        self.perform('visit_PrepIfInst', node)
 
-    def afterVisitPrepIfInst(self, node):
-        self.perform('afterVisitPrepIfInst', node)
+    def leave_PrepIfInst(self, node):
+        self.perform('leave_PrepIfInst', node)
 
     # PrepElsIfInst
 
-    def beforeVisitPrepElsIfInst(self, node):
-        self.perform('beforeVisitPrepElsIfInst', node)
+    def visit_PrepElsIfInst(self, node):
+        self.perform('visit_PrepElsIfInst', node)
 
-    def afterVisitPrepElsIfInst(self, node):
-        self.perform('afterVisitPrepElsIfInst', node)
+    def leave_PrepElsIfInst(self, node):
+        self.perform('leave_PrepElsIfInst', node)
 
     # PrepElseInst
 
-    def beforeVisitPrepElseInst(self, node):
-        self.perform('beforeVisitPrepElseInst', node)
+    def visit_PrepElseInst(self, node):
+        self.perform('visit_PrepElseInst', node)
 
     # PrepEndIfInst
 
-    def beforeVisitPrepEndIfInst(self, node):
-        self.perform('beforeVisitPrepEndIfInst', node)
+    def visit_PrepEndIfInst(self, node):
+        self.perform('visit_PrepEndIfInst', node)
 
     # PrepRegionInst
 
-    def beforeVisitPrepRegionInst(self, node):
-        self.perform('beforeVisitPrepRegionInst', node)
+    def visit_PrepRegionInst(self, node):
+        self.perform('visit_PrepRegionInst', node)
 
     # PrepEndRegionInst
 
-    def beforeVisitPrepEndRegionInst(self, node):
-        self.perform('beforeVisitPrepEndRegionInst', node)
+    def visit_PrepEndRegionInst(self, node):
+        self.perform('visit_PrepEndRegionInst', node)
 
     # PrepBinaryExpr
 
-    def beforeVisitPrepBinaryExpr(self, node):
-        self.perform('beforeVisitPrepBinaryExpr', node)
+    def visit_PrepBinaryExpr(self, node):
+        self.perform('visit_PrepBinaryExpr', node)
 
-    def afterVisitPrepBinaryExpr(self, node):
-        self.perform('afterVisitPrepBinaryExpr', node)
+    def leave_PrepBinaryExpr(self, node):
+        self.perform('leave_PrepBinaryExpr', node)
 
     # PrepNotExpr
 
-    def beforeVisitPrepNotExpr(self, node):
-        self.perform('beforeVisitPrepNotExpr', node)
+    def visit_PrepNotExpr(self, node):
+        self.perform('visit_PrepNotExpr', node)
 
-    def afterVisitPrepNotExpr(self, node):
-        self.perform('afterVisitPrepNotExpr', node)
+    def leave_PrepNotExpr(self, node):
+        self.perform('leave_PrepNotExpr', node)
 
     # PrepSymExpr
 
-    def beforeVisitPrepSymExpr(self, node):
-        self.perform('beforeVisitPrepSymExpr', node)
+    def visit_PrepSymExpr(self, node):
+        self.perform('visit_PrepSymExpr', node)
 
     # PrepParenExpr
 
-    def beforeVisitPrepParenExpr(self, node):
-        self.perform('beforeVisitPrepParenExpr', node)
+    def visit_PrepParenExpr(self, node):
+        self.perform('visit_PrepParenExpr', node)
 
-    def afterVisitPrepParenExpr(self, node):
-        self.perform('afterVisitPrepParenExpr', node)
+    def leave_PrepParenExpr(self, node):
+        self.perform('leave_PrepParenExpr', node)
 

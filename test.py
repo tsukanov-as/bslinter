@@ -28,19 +28,19 @@ class TestPlugin(Plugin):
     def result(self) -> str:
         return '\n'.join(self.errors)
 
-    def beforeVisitModule(self, node: ast.Module):
+    def visit_Module(self, node: ast.Module):
         self.comments = node.Comments
 
-    def beforeVisitMethodDecl(self, node: ast.MethodDecl):
+    def visit_MethodDecl(self, node: ast.MethodDecl):
         line = node.Place.EndLine
         if comment := self.comments.get(line):
             if comment.rstrip() != f' {node.Sign.Name}()':
                 self.errors.append(f'[{self.path}] Метод "{node.Sign.Name}()" имеет неправильный замыкающий комментарий в строке {line}')
 
-    def beforeVisitPrepRegionInst(self, node: ast.PrepRegionInst):
+    def visit_PrepRegionInst(self, node: ast.PrepRegionInst):
         self.region_stack.append(node.Name)
 
-    def beforeVisitPrepEndRegionInst(self, node: ast.PrepEndRegionInst):
+    def visit_PrepEndRegionInst(self, node: ast.PrepEndRegionInst):
         line = node.Place.EndLine
         region_name = self.region_stack.pop()
         if comment := self.comments.get(line):
