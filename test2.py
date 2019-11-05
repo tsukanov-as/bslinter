@@ -14,7 +14,7 @@ class TestPlugin(Plugin):
 
         self.errors: List[str] = []
 
-    def result(self) -> str:
+    def close(self) -> str:
         return '\n'.join(self.errors)
 
     def visit_LocalStringTypeItem(self, node: cf.LocalStringTypeItem):
@@ -28,4 +28,4 @@ v = Visitor(plugins)
 mdo: Optional[cf.MetaDataObject] = root.MetaDataObject
 if mdo is not None and mdo.Configuration is not None:
     mdo.Configuration.walk(v)
-    print(plugins[0].result())
+    print(plugins[0].close())

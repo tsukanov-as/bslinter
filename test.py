@@ -25,7 +25,7 @@ class TestPlugin(Plugin):
         self.region_stack = []
         self.errors = []
 
-    def result(self) -> str:
+    def close(self) -> str:
         return '\n'.join(self.errors)
 
     def visit_Module(self, node: ast.Module):
@@ -56,7 +56,7 @@ def parse(path):
             plugins = [TestPlugin(str(path), s)]
             v = Visitor(plugins)
             m.visit(v)
-            return plugins[0].result()
+            return plugins[0].close()
         except Exception as e:
             print(path)
             print(e)

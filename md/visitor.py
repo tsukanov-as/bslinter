@@ -2,15 +2,15 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 
-class Plugin:
+class Plugin(ABC):
 
-    def __init__(self, path: str):
+    def __init__(self):
         pass
 
     @abstractmethod
-    def result(self) -> str:
+    def close(self) -> str:
         pass
 
 class Visitor:
