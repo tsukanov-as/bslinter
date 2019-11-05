@@ -6,7 +6,6 @@ from bsl.parser  import Parser
 from bsl.visitor import Plugin, Visitor
 import bsl.ast as ast
 
-import xml.etree.ElementTree as ET
 import md.conf as cf
 import md.forms as fm
 from md.base import XMLParser
@@ -92,7 +91,7 @@ def main():
                 _ = XMLParser(str(path), cf.Root).parse()
             pass
 
-    print('metadata time: ', time.perf_counter() - strt) # 65 sec
+    print('metadata time: ', time.perf_counter() - strt) # 70 sec
 
 
 if __name__ == "__main__":

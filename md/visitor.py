@@ -6,8 +6,6 @@ from abc import abstractmethod
 
 class Plugin:
 
-    # TODO: плагину должны быть известны путь к файлу и позиция внутри файла
-
     def __init__(self, path: str):
         pass
 
@@ -21,8 +19,8 @@ class Visitor:
 
         methods = [func for func in dir(self)
                             if callable(getattr(self, func))
-                                and (func.startswith("beforeVisit")
-                                     or func.startswith("afterVisit"))]
+                                and (func.startswith("visit_")
+                                     or func.startswith("leave_"))]
 
         self.hooks = {}
 
@@ -42,45 +40,45 @@ class Visitor:
 
     # Configuration
 
-    def beforeVisitConfiguration(self, node):
-        self.perform('beforeVisitConfiguration', node)
+    def visit_Configuration(self, node):
+        self.perform('visit_Configuration', node)
 
-    def afterVisitConfiguration(self, node):
-        self.perform('afterVisitConfiguration', node)
+    def leave_Configuration(self, node):
+        self.perform('leave_Configuration', node)
 
     # ConfigurationProperties
 
-    def beforeVisitConfigurationProperties(self, node):
-        self.perform('beforeVisitConfigurationProperties', node)
+    def visit_ConfigurationProperties(self, node):
+        self.perform('visit_ConfigurationProperties', node)
 
-    def afterVisitConfigurationProperties(self, node):
-        self.perform('afterVisitConfigurationProperties', node)
+    def leave_ConfigurationProperties(self, node):
+        self.perform('leave_ConfigurationProperties', node)
 
     # CommonModule
 
-    def beforeVisitCommonModule(self, node):
-        self.perform('beforeVisitCommonModule', node)
+    def visit_CommonModule(self, node):
+        self.perform('visit_CommonModule', node)
 
-    def afterVisitCommonModule(self, node):
-        self.perform('afterVisitCommonModule', node)
+    def leave_CommonModule(self, node):
+        self.perform('leave_CommonModule', node)
 
     # CommonModuleProperties
 
-    def beforeVisitCommonModuleProperties(self, node):
-        self.perform('beforeVisitCommonModuleProperties', node)
+    def visit_CommonModuleProperties(self, node):
+        self.perform('visit_CommonModuleProperties', node)
 
-    def afterVisitCommonModuleProperties(self, node):
-        self.perform('afterVisitCommonModuleProperties', node)
+    def leave_CommonModuleProperties(self, node):
+        self.perform('leave_CommonModuleProperties', node)
 
     # LocalStringType
 
-    def beforeVisitLocalStringType(self, node):
-        self.perform('beforeVisitLocalStringType', node)
+    def visit_LocalStringType(self, node):
+        self.perform('visit_LocalStringType', node)
 
-    def afterVisitLocalStringType(self, node):
-        self.perform('afterVisitLocalStringType', node)
+    def leave_LocalStringType(self, node):
+        self.perform('leave_LocalStringType', node)
 
     # LocalStringTypeItem
 
-    def beforeVisitLocalStringTypeItem(self, node):
-        self.perform('beforeVisitLocalStringTypeItem', node)
+    def visit_LocalStringTypeItem(self, node):
+        self.perform('visit_LocalStringTypeItem', node)

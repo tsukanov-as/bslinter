@@ -27,17 +27,17 @@ class LocalStringTypeItem(XMLData):
     content: Optional[str]
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitLocalStringTypeItem(self)
+        visitor.visit_LocalStringTypeItem(self)
 
 class LocalStringType(XMLData):
     item: List[LocalStringTypeItem]
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitLocalStringType(self)
+        visitor.visit_LocalStringType(self)
         if self.item is not None:
             for item in self.item:
                 item.visit(visitor)
-        visitor.afterVisitLocalStringType(self)
+        visitor.leave_LocalStringType(self)
 
 class MDListTypeItem(XMLData):
     type:  Optional[str]
@@ -964,20 +964,20 @@ class CommonModuleProperties(XMLData):
     ReturnValuesReuse:         Optional[enums.ReturnValuesReuse]
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitCommonModuleProperties(self)
+        visitor.visit_CommonModuleProperties(self)
         if self.Synonym is not None:
             self.Synonym.visit(visitor)
-        visitor.afterVisitCommonModuleProperties(self)
+        visitor.leave_CommonModuleProperties(self)
 
 class CommonModule(XMLFile):
     uuid:       Optional[str]
     Properties: Optional[CommonModuleProperties]
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitCommonModule(self)
+        visitor.visit_CommonModule(self)
         if self.Properties is not None:
             self.Properties.visit(visitor)
-        visitor.afterVisitCommonModule(self)
+        visitor.leave_CommonModule(self)
 
 class CommonPictureProperties(XMLData):
     Name:    Optional[str]
@@ -1045,10 +1045,10 @@ class ConfigurationProperties(XMLData):
     #RequiredMobileApplicationPermissions  "FixedMap"
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitConfigurationProperties(self)
+        visitor.visit_ConfigurationProperties(self)
         if self.Synonym is not None:
             self.Synonym.visit(visitor)
-        visitor.afterVisitConfigurationProperties(self)
+        visitor.leave_ConfigurationProperties(self)
 
 class ConfigurationChildObjects(XMLData):
     AccountingRegister:         List[str]
@@ -1107,7 +1107,7 @@ class Configuration(XMLFile):
         if self.Properties is not None:
             self.Properties.visit(visitor)
 
-        dirname = os.path.dirname(self.__path__)
+        dirname = os.path.dirname(self._path)
 
         if self.ChildObjects is not None:
 
@@ -1125,10 +1125,10 @@ class Configuration(XMLFile):
 
 
     def visit(self, visitor: Visitor):
-        visitor.beforeVisitConfiguration(self)
+        visitor.visit_Configuration(self)
         if self.Properties is not None:
             self.Properties.visit(visitor)
-        visitor.afterVisitConfiguration(self)
+        visitor.leave_Configuration(self)
 
 class ConstantProperties(XMLData):
     Name:                  Optional[str]

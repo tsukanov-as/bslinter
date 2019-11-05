@@ -17,8 +17,8 @@ class TestPlugin(Plugin):
     def result(self) -> str:
         return '\n'.join(self.errors)
 
-    def beforeVisitLocalStringTypeItem(self, node: cf.LocalStringTypeItem):
-        self.errors.append(f'Синоним для языка {node.lang} = {node.content}')
+    def visit_LocalStringTypeItem(self, node: cf.LocalStringTypeItem):
+        self.errors.append(f'[{node._path}:ln {node._startLine} col {node._startColumn}] Синоним для языка {node.lang} = {node.content}')
 
 
 path = 'C:/temp/ERP/Configuration.xml'
@@ -27,6 +27,5 @@ plugins = [TestPlugin()]
 v = Visitor(plugins)
 mdo: Optional[cf.MetaDataObject] = root.MetaDataObject
 if mdo is not None and mdo.Configuration is not None:
-    mdo.Configuration.__path__ = path
     mdo.Configuration.walk(v)
     print(plugins[0].result())

@@ -16,6 +16,13 @@ class XMLData:
 
     _types: Dict[str, TypeDescription]
 
+    def __init__(self):
+        self._path: str = ''
+        self._startLine: int = 0
+        self._endLine: int = 0
+        self._startColumn: int = 0
+        self._endColumn: int = 0
+
     def __getattr__(self, name):
         return None
 
@@ -23,10 +30,6 @@ class XMLData:
         pass
 
 class XMLFile(XMLData):
-
-    def __init__(self, path: Optional[str] = None):
-        if path is not None:
-            self.__path__ = path
 
     def walk(self, visitor: Visitor):
         self.visit(visitor)
@@ -78,10 +81,16 @@ class XMLParser:
                     item = items
                 elif issubclass(td.meta, XMLData):
                     item = td.meta()
+                    item._path = self.path
+                    item._startLine = self.parser.CurrentLineNumber
+                    item._startColumn = self.parser.CurrentColumnNumber
                     items.append(item)
             else:
                 if issubclass(td.meta, XMLData):
                     item = td.meta()
+                    item._path = self.path
+                    item._startLine = self.parser.CurrentLineNumber
+                    item._startColumn = self.parser.CurrentColumnNumber
                     if issubclass(self.meta, OrderedXMLData):
                         self.item.append(item)
                     else:
@@ -104,7 +113,9 @@ class XMLParser:
         self.name = name
 
     def end(self, name):
-
+        if isinstance(self.item, XMLData):
+            self.item._endLine = self.parser.CurrentLineNumber
+            self.item._endColumn = self.parser.CurrentColumnNumber + len(name) + 3  # </name>
         self.meta, self.item, self.name = self.stack.pop()
 
     def chardata(self, data):
