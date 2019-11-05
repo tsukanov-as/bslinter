@@ -3,6 +3,8 @@
 # license that can be found in the LICENSE file.
 
 from abc import ABC, abstractmethod
+from typing import List
+from enum import Enum, auto
 
 class Plugin(ABC):
 
@@ -12,6 +14,21 @@ class Plugin(ABC):
     @abstractmethod
     def close(self) -> str:
         pass
+
+class ModuleKinds(Enum):
+    ObjectModule = auto()
+    ManagerModule = auto()
+    ManagedFormModule = auto()
+
+class ModuleFile:
+
+    def __init__(self, kind, path, context=None):
+        self.kind: ModuleKinds = kind
+        self.path: str = path
+        self.context = context
+
+    def __repr__(self):
+        return f'{self.kind.name}: {self.path}'
 
 class Visitor:
 
@@ -30,6 +47,8 @@ class Visitor:
             for plugin in plugins:
                 if hook := getattr(plugin, name, None):
                     hooks.append(hook)
+
+        self.modules: List[ModuleFile] = []
 
     def perform(self, func_name, node):
         for hook in self.hooks[func_name]:

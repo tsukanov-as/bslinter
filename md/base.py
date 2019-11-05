@@ -30,9 +30,7 @@ class XMLData:
         pass
 
 class XMLFile(XMLData):
-
-    def walk(self, visitor: Visitor):
-        self.visit(visitor)
+    pass
 
 class OrderedXMLData(XMLData):
 

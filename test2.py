@@ -27,5 +27,5 @@ plugins = [TestPlugin()]
 v = Visitor(plugins)
 mdo: Optional[cf.MetaDataObject] = root.MetaDataObject
 if mdo is not None and mdo.Configuration is not None:
-    mdo.Configuration.walk(v)
+    mdo.Configuration.visit(v)
     print(plugins[0].close())

@@ -7,7 +7,7 @@ from decimal import Decimal
 from enum import EnumMeta
 
 import md.enums as enums
-from md.visitor import Visitor
+from md.visitor import Visitor, ModuleFile, ModuleKinds
 from md.base import XMLData, XMLFile, XMLParser, fill_types
 
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
@@ -389,7 +389,7 @@ class FormProperties(XMLData):
             dirname = self._path.rsplit('.')[0]
             path = os.path.join(dirname, 'Ext/Form.xml')
             node: fm.Root = XMLParser(path, fm.Root).parse()
-            form: Optional[fm.ManagedForm] = node.ManagedForm
+            form: Optional[fm.ManagedForm] = node.Form
             if form:
                 form.visit(visitor)
 
@@ -1266,12 +1266,27 @@ class DocumentChildObjects(XMLData):
     Command:        List[Command]
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_DocumentChildObjects(self)
         self.visit_Attributes(visitor)
         self.visit_TabularSections(visitor)
         self.visit_Commands(visitor)
         self.visit_Forms(visitor)
         visitor.leave_DocumentChildObjects(self)
+
+        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ObjectModule,
+                os.path.join(modules_dir, 'ObjectModule.bsl')
+            )
+        )
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ManagerModule,
+                os.path.join(modules_dir, 'ManagerModule.bsl')
+            )
+        )
 
     def visit_Attributes(self, visitor):
         if Attribute := self.Attribute:

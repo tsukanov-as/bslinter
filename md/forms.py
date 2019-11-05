@@ -9,7 +9,9 @@ from enum import EnumMeta
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks
 from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
 import md.enums as enums
-from md.visitor import Visitor
+from md.visitor import Visitor, ModuleFile, ModuleKinds
+
+import os.path
 
 DateTime = str
 FormItemRef = str
@@ -238,11 +240,20 @@ class ManagedForm(XMLData):
     ]
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ManagedForm(self)
         for name in self._subnodes:
             if node := getattr(self, name):
                 node.visit(visitor)
         visitor.leave_ManagedForm(self)
+
+        module_dir = os.path.join(self._path.rsplit('.')[0])
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ManagedFormModule,
+                os.path.join(module_dir, 'Module.bsl')
+            )
+        )
 
 #region Events
 
