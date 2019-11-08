@@ -22,10 +22,10 @@ class ModuleKinds(Enum):
 
 class ModuleFile:
 
-    def __init__(self, kind, path, context=None):
+    def __init__(self, kind, path, scope=None):
         self.kind: ModuleKinds = kind
         self.path: str = path
-        self.context = context
+        self.scope = scope
 
     def __repr__(self):
         return f'{self.kind.name}: {self.path}'

@@ -7,14 +7,15 @@ from decimal import Decimal
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
 from bsl.visitor import Visitor, Plugin
 from abc import abstractmethod
+from collections import namedtuple
 
 class Scope:
 
     def __init__(self, outer: Optional['Scope'] = None):
         self.Outer: Optional['Scope'] = outer
-        self.Items: Dict[str, Item] = {}
+        self.Vars: Dict[str, Item] = {}
         self.Auto: List[AutoDecl] = []
-
+        self.Methods: Dict[str, Item] = {}
 
 class Item:
     """
@@ -65,6 +66,17 @@ class Module(Node):
             stmt.visit(visitor)
         visitor.leave_Module(self)
 
+Context = namedtuple('Context', [
+    'Client',
+    'ExternalConnection',
+    'MobileApplication',
+    'MobileClient',
+    'MobileServer',
+    'Server',
+    'ThickClient',
+    'ThinClient',
+    'WebClient',
+])
 
 #region Declarations
 
@@ -72,6 +84,45 @@ class Module(Node):
 class Decl(Node):
     pass
 
+class GlobalObject(Decl):
+    """
+    Хранит информацию об объекте глобального контекста
+    """
+    def __init__(self, name, context, props=None, methods=None):
+        self.Name: str = name
+        self.Context: Context = context
+        self.Attribs: Optional[List[str]] = props
+        self.Methods: Optional[List[GlobalMethod]] = methods
+        self.Place: Place = Place(0, 0, 0, 0)
+
+    def visit(self, visitor: Visitor):
+        pass # не посещается
+
+class GlobalMethodParameter(Decl):
+    """
+    Хранит информацию о параметре метода глобального контекста
+    """
+    def __init__(self, name, required):
+        self.Name: str = name
+        self.Required: bool = required
+        self.Place: Place = Place(0, 0, 0, 0)
+
+    def visit(self, visitor: Visitor):
+        pass # не посещается
+
+class GlobalMethod(Decl):
+    """
+    Хранит информацию о методе глобального контекста
+    """
+    def __init__(self, name, retval, params, context):
+        self.Name: str = name
+        self.Context: Context = context
+        self.Params: List[GlobalMethodParameter] = params
+        self.RetVal: bool = retval
+        self.Place: Place = Place(0, 0, 0, 0)
+
+    def visit(self, visitor: Visitor):
+        pass # не посещается
 
 class VarModListDecl(Decl):
     """
@@ -112,7 +163,6 @@ class VarModDecl(Decl):
 
     def visit(self, visitor: Visitor):
         visitor.visit_VarModDecl(self)
-        # visitor.leave_VarModDecl(self)
 
 
 class VarLocDecl(Decl):
@@ -130,7 +180,6 @@ class VarLocDecl(Decl):
 
     def visit(self, visitor: Visitor):
         visitor.visit_VarLocDecl(self)
-        # visitor.leave_VarLocDecl(self)
 
 
 class AutoDecl(Decl):
@@ -155,7 +204,6 @@ class AutoDecl(Decl):
 
     def visit(self, visitor: Visitor):
         visitor.visit_AutoDecl(self)
-        # visitor.leave_AutoDecl(self)
 
 
 class ParamDecl(Decl):
@@ -284,7 +332,6 @@ class BasicLitExpr(Expr):
 
     def visit(self, visitor: Visitor):
         visitor.visit_BasicLitExpr(self)
-        # visitor.leave_BasicLitExpr(self)
 
 
 class TailItemExpr(Expr):
@@ -589,7 +636,6 @@ class BreakStmt(Stmt):
 
     def visit(self, visitor: Visitor):
         visitor.visit_BreakStmt(self)
-        # visitor.leave_BreakStmt(self)
 
 
 class ContinueStmt(Stmt):
@@ -601,7 +647,6 @@ class ContinueStmt(Stmt):
 
     def visit(self, visitor: Visitor):
         visitor.visit_ContinueStmt(self)
-        # visitor.leave_ContinueStmt(self)
 
 
 class RaiseStmt(Stmt):
@@ -850,7 +895,6 @@ class GotoStmt(Stmt):
 
     def visit(self, visitor: Visitor):
         visitor.visit_GotoStmt(self)
-        # visitor.leave_GotoStmt(self)
 
 
 class LabelStmt(Stmt):
@@ -863,7 +907,6 @@ class LabelStmt(Stmt):
 
     def visit(self, visitor: Visitor):
         visitor.visit_LabelStmt(self)
-        # visitor.leave_LabelStmt(self)
 
 
 #endregion Statements
@@ -925,7 +968,6 @@ class PrepElseInst(PrepInst):
 
     def visit(self, visitor: Visitor):
         visitor.visit_PrepElseInst(self)
-        # visitor.leave_PrepElseInst(self)
 
 
 class PrepEndIfInst(PrepInst):
@@ -937,7 +979,6 @@ class PrepEndIfInst(PrepInst):
 
     def visit(self, visitor: Visitor):
         visitor.visit_PrepEndIfInst(self)
-        # visitor.leave_PrepEndIfInst(self)
 
 
 class PrepRegionInst(PrepInst):
@@ -956,7 +997,6 @@ class PrepRegionInst(PrepInst):
 
     def visit(self, visitor: Visitor):
         visitor.visit_PrepRegionInst(self)
-        # visitor.leave_PrepRegionInst(self)
 
 
 class PrepEndRegionInst(PrepInst):
@@ -974,7 +1014,6 @@ class PrepEndRegionInst(PrepInst):
 
     def visit(self, visitor: Visitor):
         visitor.visit_PrepEndRegionInst(self)
-        # visitor.leave_PrepEndRegionInst(self)
 
 #endregion PrepInst
 
@@ -1048,7 +1087,6 @@ class PrepSymExpr(PrepExpr):
 
     def visit(self, visitor: Visitor):
         visitor.visit_PrepSymExpr(self)
-        # visitor.leave_PrepSymExpr(self)
 
 
 class PrepParenExpr(PrepExpr):

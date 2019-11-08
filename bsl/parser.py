@@ -7,6 +7,7 @@ from typing import List, Union, Dict, Optional, Tuple
 from collections import namedtuple
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
 import bsl.ast as ast
+from bsl.glob import scope as global_scope
 
 tokens_map: Dict[str, Tokens] = {
     '=': Tokens.EQL,
@@ -99,7 +100,7 @@ Error = namedtuple('Error', 'text pos line')
 
 class Parser:
 
-    def __init__(self, src: str):
+    def __init__(self, src: str, scope: ast.Scope = None):
 
         self.src: str = src
 
@@ -115,7 +116,7 @@ class Parser:
         self.tok: Tokens
         self.val: Union[Decimal, str, bool, None]
 
-        self.scope: ast.Scope = ast.Scope()  # TODO: context
+        self.scope: ast.Scope = scope or global_scope
         self.vars: Dict[str, ast.Item] = {}
         self.methods: Dict[str, ast.Item] = {}
         self.unknown: Dict[str, ast.Item] = {}
@@ -383,30 +384,36 @@ class Parser:
 
     def error(self, text, marker: Marker):
         self.errors.append(Error(text, marker.pos, marker.line))
-        # if stop:
-        #     raise Exception(text)
-        # else:
-        #     print(text, pos)
 
-    def find_item(self, name) -> Optional[ast.Item]:
-        item = self.scope.Items.get(name)
+    def find_var(self, name) -> Optional[ast.Item]:
+        item = self.scope.Vars.get(name)
         scope = self.scope.Outer
         while item is None and scope is not None:
-            item = scope.Items.get(name)
+            item = scope.Vars.get(name)
+            scope = scope.Outer
+        return item
+
+    def find_method(self, name) -> Optional[ast.Item]:
+        item = self.scope.Methods.get(name)
+        scope = self.scope.Outer
+        while item is None and scope is not None:
+            item = scope.Methods.get(name)
             scope = scope.Outer
         return item
 
     def open_scope(self) -> ast.Scope:
         scope = ast.Scope(self.scope)
         self.scope = scope
-        self.vars = scope.Items
+        self.vars = scope.Vars
+        self.methods = scope.Methods
         return scope
 
     def close_scope(self) -> ast.Scope:
         scope = self.scope.Outer
         assert scope is not None
         self.scope = scope
-        self.vars = scope.Items
+        self.vars = scope.Vars
+        self.methods = scope.Methods
         return scope
 
     def parse(self) -> ast.Module:
@@ -622,7 +629,7 @@ class Parser:
                 args = self.parseArguments()
             self.expect(Tokens.RPAREN)
             self.scan()
-            item = self.methods.get(name)
+            item = self.find_method(name.lower())
             if item is None:
                 item = self.unknown.get(name)
                 if item is not None:
@@ -639,7 +646,7 @@ class Parser:
             tail, call = self.parseTail(call)
             if len(tail) > 0:
                 allow_new_var = False
-            item = self.find_item(name.lower())
+            item = self.find_var(name.lower())
             if item is None:
                 if allow_new_var:
                     item = ast.Item(name, ast.AutoDecl(name, auto_place))
