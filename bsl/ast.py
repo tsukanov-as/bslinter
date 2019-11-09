@@ -88,10 +88,10 @@ class GlobalObject(Decl):
     """
     Хранит информацию об объекте глобального контекста
     """
-    def __init__(self, name, context, props=None, methods=None):
+    def __init__(self, name, context, attribs=None, methods=None):
         self.Name: str = name
         self.Context: Context = context
-        self.Attribs: Optional[List[str]] = props
+        self.Attribs: Optional[List[str]] = attribs
         self.Methods: Optional[List[GlobalMethod]] = methods
         self.Place: Place = Place(0, 0, 0, 0)
 

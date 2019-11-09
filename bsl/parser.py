@@ -405,7 +405,6 @@ class Parser:
         scope = ast.Scope(self.scope)
         self.scope = scope
         self.vars = scope.Vars
-        self.methods = scope.Methods
         return scope
 
     def close_scope(self) -> ast.Scope:
@@ -413,11 +412,11 @@ class Parser:
         assert scope is not None
         self.scope = scope
         self.vars = scope.Vars
-        self.methods = scope.Methods
         return scope
 
     def parse(self) -> ast.Module:
         self.open_scope()
+        self.methods = self.scope.Methods
         self.scan()
         decls = self.parseModDecls()
         statements = self.parseStatements()
@@ -631,13 +630,13 @@ class Parser:
             self.scan()
             item = self.find_method(name.lower())
             if item is None:
-                item = self.unknown.get(name)
+                item = self.unknown.get(name.lower())
                 if item is not None:
                     places = self.callsites[item]
                     places.append(auto_place)
                 else:
                     item = ast.Item(name)
-                    self.unknown[name] = item
+                    self.unknown[name.lower()] = item
                     self.callsites[item] = [auto_place]
             call = True
             tail, call = self.parseTail(call)
@@ -906,7 +905,7 @@ class Parser:
             item.Decl = sign
         else:
             item = ast.Item(name, sign)
-        if self.methods.get(name_lower) is not None:
+        if self.find_method(name_lower) is not None:
             raise AlreadyDeclared('Method already declared', marker)
         self.methods[name_lower] = item
         if export:
@@ -1173,7 +1172,7 @@ class Parser:
         marker = self.marker()
         self.expect(Tokens.IDENT)
         var_pos = self.beg_pos
-        ident, var, call = self.parseIdentExpr()
+        ident, var, call = self.parseIdentExpr(True)
         if call:
             raise UnexpectedSyntax('Variable expected', Marker(var_pos, self.cur_line))
         self.expect(Tokens.EQL)

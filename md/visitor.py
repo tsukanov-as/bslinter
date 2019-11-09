@@ -5,6 +5,8 @@
 from abc import ABC, abstractmethod
 from typing import List
 from enum import Enum, auto
+from bsl.glob import scope as global_scope
+from bsl.ast import Scope
 
 class Plugin(ABC):
 
@@ -19,6 +21,7 @@ class ModuleKinds(Enum):
     ObjectModule = auto()
     ManagerModule = auto()
     ManagedFormModule = auto()
+    CommonModule = auto()
 
 class ModuleFile:
 
@@ -50,12 +53,25 @@ class Visitor:
 
         self.modules: List[ModuleFile] = []
 
+        self.scope: Scope = global_scope
+
     def perform(self, func_name, node):
         for hook in self.hooks[func_name]:
             try:
                 hook(node)
             except Exception as e:
                 print(e)
+
+    def open_scope(self) -> Scope:
+        scope = Scope(self.scope)
+        self.scope = scope
+        return scope
+
+    def close_scope(self) -> Scope:
+        scope = self.scope.Outer
+        assert scope is not None
+        self.scope = scope
+        return scope
 
     #region conf
 
@@ -171,5 +187,21 @@ class Visitor:
 
     def leave_ManagedForm(self, node):
         self.perform('leave_ManagedForm', node)
+
+    # FormAttributes
+
+    def visit_FormAttributes(self, node):
+        self.perform('visit_FormAttributes', node)
+
+    def leave_FormAttributes(self, node):
+        self.perform('leave_FormAttributes', node)
+
+    # FormAttribute
+
+    def visit_FormAttribute(self, node):
+        self.perform('visit_FormAttribute', node)
+
+    def leave_FormAttribute(self, node):
+        self.perform('leave_FormAttribute', node)
 
     #endregion forms

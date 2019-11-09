@@ -53,13 +53,13 @@ def parse(module):
     if os.path.isfile(module.path):
         with open(module.path, 'r', encoding='utf-8-sig') as f:
             s = f.read()
-            p = Parser(s)
+            p = Parser(s, module.scope)
             try:
                 m = p.parse()
                 plugins = [TestPlugin(module.path, s)]
                 v = Visitor(plugins)
                 m.visit(v)
-                return plugins[0].close()
+                return plugins[0].close() + f"\n{module.path}" + f"\n{module.path} :: ".join([str(e) for e in p.errors])
             except Exception as e:
                 print(module.path)
                 print(e)
@@ -94,7 +94,7 @@ def main():
                 f.write(x)
                 f.write('\n')
 
-    print('bsl time: ', time.perf_counter() - strt) # 12 sec
+    print('bsl time: ', time.perf_counter() - strt) # 75 sec
 
 
 if __name__ == "__main__":

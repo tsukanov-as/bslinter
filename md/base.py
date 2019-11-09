@@ -83,6 +83,16 @@ class XMLParser:
                     item._startLine = self.parser.CurrentLineNumber
                     item._startColumn = self.parser.CurrentColumnNumber
                     items.append(item)
+                    for key, data in attrs.items():
+                        attr = key
+                        if (i := attr.find(':')) >= 0:
+                            attr = attr[i+1:]
+                        if attrtd := td.meta._types.get(attr):
+                            if type(attrtd.meta) == EnumMeta:
+                                setattr(item, attr, attrtd.meta.get(data))
+                            else:
+                                setattr(item, attr, attrtd.meta(data))
+                            pass
             else:
                 if issubclass(td.meta, XMLData):
                     item = td.meta()

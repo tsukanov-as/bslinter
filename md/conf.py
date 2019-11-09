@@ -13,6 +13,8 @@ from md.base import XMLData, XMLFile, XMLParser, fill_types
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
 import md.forms as fm
 
+from bsl.ast import Item, GlobalObject, GlobalMethod, Context
+
 import os.path
 
 #region basic
@@ -960,6 +962,25 @@ class CommonModuleProperties(XMLData):
     ReturnValuesReuse:         Optional[enums.ReturnValuesReuse]
 
     def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Context(
+                    Client=False,
+                    ExternalConnection=False,
+                    MobileApplication=False,
+                    MobileClient=False,
+                    MobileServer=False,
+                    Server=False,
+                    ThickClient=False,
+                    ThinClient=False,
+                    WebClient=False
+                )
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
         visitor.visit_CommonModuleProperties(self)
         if self.Synonym is not None:
             self.Synonym.visit(visitor)
@@ -970,10 +991,20 @@ class CommonModule(XMLFile):
     Properties: Optional[CommonModuleProperties]
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_CommonModule(self)
         if self.Properties is not None:
             self.Properties.visit(visitor)
         visitor.leave_CommonModule(self)
+
+        module_dir = os.path.join(self._path.rsplit('.')[0])
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.CommonModule,
+                os.path.join(module_dir, 'Ext/Module.bsl'),
+                visitor.scope
+            )
+        )
 
 class CommonPictureProperties(XMLData):
     Name:    Optional[str]
@@ -1127,12 +1158,17 @@ class Configuration(XMLFile):
     ChildObjects: Optional[ConfigurationChildObjects]
 
     def visit(self, visitor: Visitor):
+
+        visitor.open_scope()
+
         visitor.visit_Configuration(self)
         if self.Properties:
             self.Properties.visit(visitor)
         if self.ChildObjects:
             self.ChildObjects.visit(visitor)
         visitor.leave_Configuration(self)
+
+        visitor.close_scope()
 
 class ConstantProperties(XMLData):
     Name:                  Optional[str]
@@ -1278,13 +1314,15 @@ class DocumentChildObjects(XMLData):
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ObjectModule,
-                os.path.join(modules_dir, 'ObjectModule.bsl')
+                os.path.join(modules_dir, 'ObjectModule.bsl'),
+                visitor.scope
             )
         )
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ManagerModule,
-                os.path.join(modules_dir, 'ManagerModule.bsl')
+                os.path.join(modules_dir, 'ManagerModule.bsl'),
+                visitor.scope
             )
         )
 

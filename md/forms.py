@@ -11,6 +11,8 @@ from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
 import md.enums as enums
 from md.visitor import Visitor, ModuleFile, ModuleKinds
 
+from bsl.ast import Item, GlobalObject, GlobalMethod, Context
+
 import os.path
 
 DateTime = str
@@ -237,9 +239,13 @@ class ManagedForm(XMLData):
 
     _subnodes = [
         'Title',
+        # ...
+        'Attributes'
     ]
 
     def visit(self, visitor: Visitor):
+
+        scope = visitor.open_scope()
 
         visitor.visit_ManagedForm(self)
         for name in self._subnodes:
@@ -247,11 +253,14 @@ class ManagedForm(XMLData):
                 node.visit(visitor)
         visitor.leave_ManagedForm(self)
 
+        visitor.close_scope()
+
         module_dir = os.path.join(self._path.rsplit('.')[0])
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ManagedFormModule,
-                os.path.join(module_dir, 'Module.bsl')
+                os.path.join(module_dir, 'Module.bsl'),
+                scope
             )
         )
 
@@ -312,9 +321,83 @@ class FormAttribute(XMLData):
     Columns:           Optional[FormAttributeColumns]
     #Settings ""; # FormAttribute()
 
+    _subnodes = [
+        'Title',
+    ]
+
+    def visit(self, visitor: Visitor):
+
+        if self.name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.name,
+                Context(
+                    Client=False,
+                    ExternalConnection=False,
+                    MobileApplication=False,
+                    MobileClient=False,
+                    MobileServer=False,
+                    Server=False,
+                    ThickClient=False,
+                    ThinClient=False,
+                    WebClient=False
+                )
+            )
+            item = Item(self.name, attribute)
+            visitor.scope.Vars[self.name.lower()] = item
+
+        visitor.visit_FormAttribute(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_FormAttribute(self)
+
 class FormAttributes(XMLData):
     Attribute: List[FormAttribute]
     # Items["ConditionalAppearance"] = "ConditionalAppearance";
+
+    def visit(self, visitor: Visitor):
+
+        name = 'ThisObject'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+
+        name = 'Items'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+
+        visitor.visit_FormAttributes(self)
+        if self.Attribute:
+            for node in self.Attribute:
+                node.visit(visitor)
+        visitor.leave_FormAttributes(self)
 
 #endregion Attributes
 
