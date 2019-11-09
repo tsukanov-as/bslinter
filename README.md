@@ -1,5 +1,7 @@
 # bslinter
 
+Чат: https://t.me/bslinter
+
 Используется:
 * python 3.8
 * VSC
