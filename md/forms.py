@@ -11,7 +11,7 @@ from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
 import md.enums as enums
 from md.visitor import Visitor, ModuleFile, ModuleKinds
 
-from bsl.ast import Item, GlobalObject, GlobalMethod, Context
+from bsl.ast import Item, GlobalObject, GlobalMethod, GlobalMethodParameter as P, Context
 
 import os.path
 
@@ -413,7 +413,6 @@ class FormAttributes(XMLData):
         visitor.scope.Vars[name.lower()] = item
         visitor.scope.Vars['этаформа'] = item
 
-
         name = 'Items'
         attribute = GlobalObject( # TODO: attribs?, methods?
             name,
@@ -508,6 +507,90 @@ class FormAttributes(XMLData):
         item = Item(name, attribute)
         visitor.scope.Vars[name.lower()] = item
         visitor.scope.Vars['модифицированность'] = item
+
+        name = 'FormAttributeToValue'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[P('AttributeName', True), P('Type', False)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['реквизитформывзначение'] = item
+
+        name = 'ValueToFormAttribute'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[P('Value', True), P('AttributeName', True)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['значениевреквизитформы'] = item
+
+        name = 'Write'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[P('WriteParameters', False)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['записать'] = item
+
+        name = 'LockFormDataForEdit'
+        method = GlobalMethod(
+            name,
+            retval=False,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['заблокироватьданныеформыдляредактирования'] = item
 
         visitor.visit_FormAttributes(self)
         if self.Attribute:

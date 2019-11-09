@@ -429,10 +429,11 @@ class Parser:
             self.comments.copy()
         )
         for name in self.unknown:
-            places = self.callsites[self.unknown[name]]
+            item = self.unknown[name]
+            places = self.callsites[item]
             for place in places:
                 self.error(
-                    f'Undeclared method "{name}"',
+                    f'Undeclared method "{item.Name}"',
                     Marker(place.BegPos, place.BegLine)
                 )
         self.expect(Tokens.EOF)

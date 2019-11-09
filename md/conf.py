@@ -94,6 +94,12 @@ class StandardAttribute(XMLData):
         'EditFormat',
     ]
 
+    _ru = {
+        'Ref': 'ссылка',
+        'Date': 'дата',
+        'Posted': 'проведен',
+    }
+
     def visit(self, visitor: Visitor):
 
         if self.name:
@@ -113,6 +119,8 @@ class StandardAttribute(XMLData):
             )
             item = Item(self.name, attribute)
             visitor.scope.Vars[self.name.lower()] = item
+            if ru := self._ru.get(self.name):
+                visitor.scope.Vars[ru] = item # type: ignore
 
         visitor.visit_StandardAttribute(self)
         for name in self._subnodes:
@@ -1464,6 +1472,67 @@ class DocumentChildObjects(XMLData):
         item = Item(name, attribute)
         scope.Vars[name.lower()] = item
         scope.Vars['движения'] = item
+
+        name = 'DataExchange'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        scope.Vars[name.lower()] = item
+        scope.Vars['обменданными'] = item
+
+        name = 'PointInTime'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['моментвремени'] = item
+
+        name = 'Metadata'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['метаданные'] = item
 
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
