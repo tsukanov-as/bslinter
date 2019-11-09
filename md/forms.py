@@ -374,6 +374,7 @@ class FormAttributes(XMLData):
         )
         item = Item(name, attribute)
         visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['уникальныйидентификатор'] = item
 
         name = 'ThisObject'
         attribute = GlobalObject( # TODO: attribs?, methods?
@@ -508,6 +509,63 @@ class FormAttributes(XMLData):
         visitor.scope.Vars[name.lower()] = item
         visitor.scope.Vars['модифицированность'] = item
 
+        name = 'Window'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['окно'] = item
+
+        name = 'Commands'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['команды'] = item
+
+        name = 'FormOwner'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['владелецформы'] = item
+
         name = 'FormAttributeToValue'
         method = GlobalMethod(
             name,
@@ -591,6 +649,111 @@ class FormAttributes(XMLData):
         item = Item(name, method)
         visitor.scope.Methods[name.lower()] = item
         visitor.scope.Methods['заблокироватьданныеформыдляредактирования'] = item
+
+        name = 'IsInputAvailable'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['вводдоступен'] = item
+
+        name = 'Close'
+        method = GlobalMethod(
+            name,
+            retval=False,
+            params=[P('CloseParameter', False)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['закрыть'] = item
+
+        name = 'Read'
+        method = GlobalMethod(
+            name,
+            retval=False,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['прочитать'] = item
+
+        name = 'GetFormFunctionalOption'
+        method = GlobalMethod(
+            name,
+            retval=False,
+            params=[P('Name', True)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['получитьфункциональнуюопциюформы'] = item
+
+        name = 'RefreshDataRepresentation'
+        method = GlobalMethod(
+            name,
+            retval=False,
+            params=[P('UpdateItems', False)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['обновитьотображениеданных'] = item
 
         visitor.visit_FormAttributes(self)
         if self.Attribute:

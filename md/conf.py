@@ -13,7 +13,7 @@ from md.base import XMLData, XMLFile, XMLParser, fill_types
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
 import md.forms as fm
 
-from bsl.ast import Item, GlobalObject, GlobalMethod, Context
+from bsl.ast import Item, GlobalObject, GlobalMethod, GlobalMethodParameter as P, Context
 
 import os.path
 
@@ -1534,6 +1534,27 @@ class DocumentChildObjects(XMLData):
         visitor.scope.Methods[name.lower()] = item
         visitor.scope.Methods['метаданные'] = item
 
+        name = 'IsNew'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['этоновый'] = item
+
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
             ModuleFile(
@@ -1586,6 +1607,27 @@ class Document(XMLFile):
         visitor.leave_Document(self)
 
         visitor.close_scope()
+
+        name = 'GetTemplate'
+        method = GlobalMethod(
+            name,
+            retval=True,
+            params=[P('Template', True)],
+            context=Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, method)
+        visitor.scope.Methods[name.lower()] = item
+        visitor.scope.Methods['получитьмакет'] = item
 
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
