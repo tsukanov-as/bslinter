@@ -357,6 +357,24 @@ class FormAttributes(XMLData):
 
     def visit(self, visitor: Visitor):
 
+        name = 'UUID'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+
         name = 'ThisObject'
         attribute = GlobalObject( # TODO: attribs?, methods?
             name,
@@ -374,6 +392,27 @@ class FormAttributes(XMLData):
         )
         item = Item(name, attribute)
         visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['этотобъект'] = item
+
+        name = 'ThisForm'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['этаформа'] = item
+
 
         name = 'Items'
         attribute = GlobalObject( # TODO: attribs?, methods?
@@ -392,6 +431,83 @@ class FormAttributes(XMLData):
         )
         item = Item(name, attribute)
         visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['элементы'] = item
+
+        name = 'Parameters'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['параметры'] = item
+
+        name = 'ReadOnly'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['толькопросмотр'] = item
+
+        name = 'ConditionalAppearance'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['условноеоформление'] = item
+
+        name = 'Modified'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['модифицированность'] = item
 
         visitor.visit_FormAttributes(self)
         if self.Attribute:

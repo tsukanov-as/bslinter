@@ -160,6 +160,38 @@ class Visitor:
     def leave_StandardAttributes(self, node):
         self.perform('leave_StandardAttributes', node)
 
+    # Attribute
+
+    def visit_Attribute(self, node):
+        self.perform('visit_Attribute', node)
+
+    def leave_Attribute(self, node):
+        self.perform('leave_Attribute', node)
+
+    # AttributeProperties
+
+    def visit_AttributeProperties(self, node):
+        self.perform('visit_AttributeProperties', node)
+
+    def leave_AttributeProperties(self, node):
+        self.perform('leave_AttributeProperties', node)
+
+    # TabularSection
+
+    def visit_TabularSection(self, node):
+        self.perform('visit_TabularSection', node)
+
+    def leave_TabularSection(self, node):
+        self.perform('leave_TabularSection', node)
+
+    # TabularSectionProperties
+
+    def visit_TabularSectionProperties(self, node):
+        self.perform('visit_TabularSectionProperties', node)
+
+    def leave_TabularSectionProperties(self, node):
+        self.perform('leave_TabularSectionProperties', node)
+
     # Form
 
     def visit_Form(self, node):

@@ -95,6 +95,25 @@ class StandardAttribute(XMLData):
     ]
 
     def visit(self, visitor: Visitor):
+
+        if self.name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.name,
+                Context(
+                    Client=False,
+                    ExternalConnection=False,
+                    MobileApplication=False,
+                    MobileClient=False,
+                    MobileServer=False,
+                    Server=False,
+                    ThickClient=False,
+                    ThinClient=False,
+                    WebClient=False
+                )
+            )
+            item = Item(self.name, attribute)
+            visitor.scope.Vars[self.name.lower()] = item
+
         visitor.visit_StandardAttribute(self)
         for name in self._subnodes:
             if node := getattr(self, name):
@@ -177,9 +196,46 @@ class AttributeProperties(XMLData):
     #MaxValue
     #ChoiceParameters
 
+    _subnodes = [
+        'Synonym',
+        # ...
+    ]
+
+    def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Context(
+                    Client=False,
+                    ExternalConnection=False,
+                    MobileApplication=False,
+                    MobileClient=False,
+                    MobileServer=False,
+                    Server=False,
+                    ThickClient=False,
+                    ThinClient=False,
+                    WebClient=False
+                )
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
+        visitor.visit_AttributeProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_AttributeProperties(self)
+
 class Attribute(XMLData):
     uuid:       Optional[str]
     Properties: Optional[AttributeProperties]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_Attribute(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Attribute(self)
 
 class DimensionProperties(XMLData):
     Name:                  Optional[str]
@@ -455,6 +511,38 @@ class TabularSectionProperties(XMLData):
     StandardAttributes: Optional[StandardAttributes]
     Use:                Optional[enums.AttributeUse]
 
+    _subnodes = [
+        'Synonym',
+        'ToolTip',
+        # ...
+    ]
+
+    def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Context(
+                    Client=False,
+                    ExternalConnection=False,
+                    MobileApplication=False,
+                    MobileClient=False,
+                    MobileServer=False,
+                    Server=False,
+                    ThickClient=False,
+                    ThinClient=False,
+                    WebClient=False
+                )
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
+        visitor.visit_TabularSectionProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.visit_TabularSectionProperties(self)
+
 class TabularSectionChildObjects(XMLData):
     Attribute: List[Attribute]
 
@@ -462,6 +550,14 @@ class TabularSection(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[TabularSectionProperties]
     ChildObjects: Optional[TabularSectionChildObjects]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_TabularSection(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
+        visitor.visit_TabularSection(self)
 
 #endregion children
 
@@ -981,6 +1077,25 @@ class CommonModuleProperties(XMLData):
             item = Item(self.Name, attribute)
             visitor.scope.Vars[self.Name.lower()] = item
 
+        name = 'ThisObject'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['этотобъект'] = item
+
         visitor.visit_CommonModuleProperties(self)
         if self.Synonym is not None:
             self.Synonym.visit(visitor)
@@ -1303,6 +1418,8 @@ class DocumentChildObjects(XMLData):
 
     def visit(self, visitor: Visitor):
 
+        scope = visitor.scope
+
         visitor.visit_DocumentChildObjects(self)
         self.visit_Attributes(visitor)
         self.visit_TabularSections(visitor)
@@ -1310,19 +1427,50 @@ class DocumentChildObjects(XMLData):
         self.visit_Forms(visitor)
         visitor.leave_DocumentChildObjects(self)
 
+        name = 'AdditionalProperties'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        scope.Vars[name.lower()] = item
+        scope.Vars['дополнительныесвойства'] = item
+
+        name = 'RegisterRecords'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        scope.Vars[name.lower()] = item
+        scope.Vars['движения'] = item
+
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ObjectModule,
                 os.path.join(modules_dir, 'ObjectModule.bsl'),
-                visitor.scope
-            )
-        )
-        visitor.modules.append(
-            ModuleFile(
-                ModuleKinds.ManagerModule,
-                os.path.join(modules_dir, 'ManagerModule.bsl'),
-                visitor.scope
+                scope
             )
         )
 
@@ -1358,12 +1506,26 @@ class Document(XMLFile):
     ChildObjects: Optional[DocumentChildObjects]
 
     def visit(self, visitor: Visitor):
+
+        visitor.open_scope()
+
         visitor.visit_Document(self)
         if self.Properties:
             self.Properties.visit(visitor)
         if self.ChildObjects:
             self.ChildObjects.visit(visitor)
         visitor.leave_Document(self)
+
+        visitor.close_scope()
+
+        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ManagerModule,
+                os.path.join(modules_dir, 'ManagerModule.bsl'),
+                visitor.scope
+            )
+        )
 
 class DocumentJournalProperties(XMLData):
     Name:                     Optional[str]
