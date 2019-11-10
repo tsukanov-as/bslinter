@@ -9,3 +9,7 @@
 * vscode-python-test-adapter
 * mypy
 * pytest
+
+Философия:
+* KISS
+* не сцы
