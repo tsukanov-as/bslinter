@@ -14,6 +14,7 @@ from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDes
 import md.forms as fm
 
 from bsl.ast import Item, GlobalObject, GlobalMethod, GlobalMethodParameter as P, Context
+from bsl.parser import Parser
 
 import os.path
 
@@ -1120,6 +1121,8 @@ class CommonModule(XMLFile):
             self.Properties.visit(visitor)
         visitor.leave_CommonModule(self)
 
+        # TODO: парсить глобальные сразу
+
         module_dir = os.path.join(self._path.rsplit('.')[0])
         visitor.modules.append(
             ModuleFile(
@@ -1248,10 +1251,68 @@ class ConfigurationChildObjects(XMLData):
     XDTOPackage:                List[str]
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ConfigurationChildObjects(self)
         self.visit_CommonModules(visitor)
         self.visit_Documents(visitor)
         visitor.leave_ConfigurationChildObjects(self)
+
+        name = 'GlobalSearch'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['глобальныйпоиск'] = item
+
+        name = 'StandardGlobalSearchType'
+        attribute = GlobalObject( # TODO: attribs?, methods?
+            name,
+            Context(
+                Client=False,
+                ExternalConnection=False,
+                MobileApplication=False,
+                MobileClient=False,
+                MobileServer=False,
+                Server=False,
+                ThickClient=False,
+                ThinClient=False,
+                WebClient=False
+            )
+        )
+        item = Item(name, attribute)
+        visitor.scope.Vars[name.lower()] = item
+        visitor.scope.Vars['стандартныйвидглобальногопоиска'] = item
+
+        dirname = os.path.dirname(self._path)
+        module = ModuleFile(
+            ModuleKinds.CommonModule,
+            os.path.join(dirname, 'Ext/ManagedApplicationModule.bsl'),
+            visitor.scope
+        )
+        visitor.modules.append(module)
+
+        with open(module.path, 'r', encoding='utf-8-sig') as f:
+            s = f.read()
+            p = Parser(s, module.scope)
+            try:
+                m = p.parse()
+                for item in m.Interface:
+                    visitor.scope.Vars[item.Name.lower()] = item
+                print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
+            except Exception as e:
+                print(module.path, e)
 
     def visit_CommonModules(self, visitor: Visitor):
         dirname = os.path.dirname(self._path)
