@@ -18,11 +18,17 @@ def method(name, runame, retval, params, context):
 
 class Context():
 
+    standard: List[Prop] = []
     attribs: List[Prop] = []
     methods: List[Prop] = []
 
     @classmethod
     def fill(cls, scope):
+
+        for prop in cls.standard:
+            for name in prop.names:
+                if not scope.Vars.get(name):
+                    scope.Vars[name.lower()] = prop.item
 
         for prop in cls.attribs:
             for name in prop.names:
@@ -45,6 +51,8 @@ class ClientApplicationForm(Context):
         attrib('Window', 'Окно', Env()),
         attrib('Commands', 'Команды', Env()),
         attrib('FormOwner', 'ВладелецФормы', Env()),
+        attrib('CurrentItem', 'ТекущийЭлемент', Env()),
+        attrib('CommandBar', 'КоманднаяПанель', Env()),
     ]
     methods = [
         method('FormAttributeToValue', 'РеквизитФормыВЗначение', True, [P('AttributeName', True), P('Type', False)], Env()),
@@ -56,6 +64,10 @@ class ClientApplicationForm(Context):
         method('Read', 'Прочитать', False, [], Env()),
         method('GetFormFunctionalOption', 'ПолучитьФункциональнуюОпциюФормы', False, [P('Name', True)], Env()),
         method('RefreshDataRepresentation', 'ОбновитьОтображениеДанных', False, [P('UpdateItems', False)], Env()),
+        method('GetAttributes', 'ПолучитьРеквизиты', True, [P('Path', False)], Env()),
+        method('ChangeAttributes', 'ИзменитьРеквизиты', False, [P('AttributesToBeAdded', False), P('AttributesToBeDeleted', False)], Env()),
+        method('NotifyChoice', 'ОповеститьОВыборе', False, [P('SelectionValue', True)], Env()),
+        method('ShowChooseFromList', 'ПоказатьВыборИзСписка', False, [P('NotifyOnCloseDescription', True), P('ValueList', True), P('FormItem', False), P('InitialValue', False)], Env()),
     ]
 
 class CommonModule(Context):
@@ -64,6 +76,9 @@ class CommonModule(Context):
     ]
 
 class DocumentObject(Context):
+    standard = [
+        attrib('Ref', 'Ссылка', Env()),
+    ]
     attribs = [
         attrib('AdditionalProperties', 'ДополнительныеСвойства', Env()),
         attrib('RegisterRecords', 'Движения', Env()),
@@ -73,6 +88,8 @@ class DocumentObject(Context):
         method('PointInTime', 'МоментВремени', True, [], Env()),
         method('Metadata', 'Метаданные', True, [], Env()),
         method('IsNew', 'ЭтоНовый', True, [], Env()),
+        method('CheckFilling', 'ПроверитьЗаполнение', True, [], Env()),
+        method('Fill', 'Заполнить', False, [P('FillingData', True)], Env()),
     ]
 
 class DocumentManager(Context):

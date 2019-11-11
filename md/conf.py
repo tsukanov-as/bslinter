@@ -13,7 +13,7 @@ from md.base import XMLData, XMLFile, XMLParser, fill_types
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
 import md.forms as fm
 
-from bsl.ast import Item, GlobalObject, Env
+from bsl.ast import Item, GlobalObject, Env, VarModDecl
 from bsl.parser import Parser
 
 import md.context as context
@@ -1050,6 +1050,17 @@ class CommonModuleProperties(XMLData):
 
         context.CommonModule.fill(visitor.scope)
 
+        module_dir = os.path.join(self._path.rsplit('.')[0])
+        module = ModuleFile(
+            ModuleKinds.CommonModule,
+            os.path.join(module_dir, 'Ext/Module.bsl'),
+            visitor.scope
+        )
+        if self.Global == enums.Bool.TRUE:
+            visitor.global_modules.append(module)
+        else:
+            visitor.modules.append(module)
+
         visitor.visit_CommonModuleProperties(self)
         if self.Synonym is not None:
             self.Synonym.visit(visitor)
@@ -1065,17 +1076,6 @@ class CommonModule(XMLFile):
         if self.Properties is not None:
             self.Properties.visit(visitor)
         visitor.leave_CommonModule(self)
-
-        # TODO: парсить глобальные сразу
-
-        module_dir = os.path.join(self._path.rsplit('.')[0])
-        visitor.modules.append(
-            ModuleFile(
-                ModuleKinds.CommonModule,
-                os.path.join(module_dir, 'Ext/Module.bsl'),
-                visitor.scope
-            )
-        )
 
 class CommonPictureProperties(XMLData):
     Name:    Optional[str]
@@ -1216,10 +1216,28 @@ class ConfigurationChildObjects(XMLData):
             try:
                 m = p.parse()
                 for item in m.Interface:
-                    visitor.scope.Vars[item.Name.lower()] = item
+                    if isinstance(item.Decl, VarModDecl):
+                        visitor.scope.Vars[item.Name.lower()] = item
+                    else:
+                        visitor.scope.Methods[item.Name.lower()] = item
                 print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
             except Exception as e:
                 print(module.path, e)
+
+        for module in visitor.global_modules:
+            with open(module.path, 'r', encoding='utf-8-sig') as f:
+                s = f.read()
+                p = Parser(s, module.scope)
+                try:
+                    m = p.parse()
+                    for item in m.Interface:
+                        if isinstance(item.Decl, VarModDecl):
+                            visitor.scope.Vars[item.Name.lower()] = item
+                        else:
+                            visitor.scope.Methods[item.Name.lower()] = item
+                    print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
+                except Exception as e:
+                    print(module.path, e)
 
     def visit_CommonModules(self, visitor: Visitor):
         dirname = os.path.dirname(self._path)

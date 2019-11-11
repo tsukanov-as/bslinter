@@ -52,6 +52,7 @@ class Visitor:
                     hooks.append(hook)
 
         self.modules: List[ModuleFile] = []
+        self.global_modules: List[ModuleFile] = []
 
         self.scope: Scope = global_scope
 
