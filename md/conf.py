@@ -1412,12 +1412,13 @@ class DocumentChildObjects(XMLData):
 
     def visit(self, visitor: Visitor):
 
-        scope = visitor.scope
+        scope = visitor.open_scope()
 
         visitor.visit_DocumentChildObjects(self)
         self.visit_Attributes(visitor)
         self.visit_TabularSections(visitor)
         self.visit_Commands(visitor)
+        visitor.close_scope()
         self.visit_Forms(visitor)
         visitor.leave_DocumentChildObjects(self)
 
