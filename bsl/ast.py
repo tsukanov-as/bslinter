@@ -66,17 +66,20 @@ class Module(Node):
             stmt.visit(visitor)
         visitor.leave_Module(self)
 
-Context = namedtuple('Context', [
-    'Client',
-    'ExternalConnection',
-    'MobileApplication',
-    'MobileClient',
-    'MobileServer',
-    'Server',
-    'ThickClient',
-    'ThinClient',
-    'WebClient',
-])
+Env = namedtuple('Env', [
+        'Client',
+        'ExternalConnection',
+        'MobileApplication',
+        'MobileClient',
+        'MobileServer',
+        'Server',
+        'ThickClient',
+        'ThinClient',
+        'WebClient',
+        'Integration',
+    ],
+    defaults=(False,False,False,False,False,False,False,False,False,False)
+)
 
 #region Declarations
 
@@ -88,9 +91,9 @@ class GlobalObject(Decl):
     """
     Хранит информацию об объекте глобального контекста
     """
-    def __init__(self, name, context, attribs=None, methods=None):
+    def __init__(self, name, env, attribs=None, methods=None):
         self.Name: str = name
-        self.Context: Context = context
+        self.Env: Env = env
         self.Attribs: Optional[List[str]] = attribs
         self.Methods: Optional[List[GlobalMethod]] = methods
         self.Place: Place = Place(0, 0, 0, 0)
@@ -114,9 +117,9 @@ class GlobalMethod(Decl):
     """
     Хранит информацию о методе глобального контекста
     """
-    def __init__(self, name, retval, params, context):
+    def __init__(self, name, retval, params, env):
         self.Name: str = name
-        self.Context: Context = context
+        self.Env: Env = env
         self.Params: List[GlobalMethodParameter] = params
         self.RetVal: bool = retval
         self.Place: Place = Place(0, 0, 0, 0)

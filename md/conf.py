@@ -13,8 +13,10 @@ from md.base import XMLData, XMLFile, XMLParser, fill_types
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
 import md.forms as fm
 
-from bsl.ast import Item, GlobalObject, GlobalMethod, GlobalMethodParameter as P, Context
+from bsl.ast import Item, GlobalObject, Env
 from bsl.parser import Parser
+
+import md.context as context
 
 import os.path
 
@@ -106,17 +108,7 @@ class StandardAttribute(XMLData):
         if self.name:
             attribute = GlobalObject( # TODO: attribs?, methods?
                 self.name,
-                Context(
-                    Client=False,
-                    ExternalConnection=False,
-                    MobileApplication=False,
-                    MobileClient=False,
-                    MobileServer=False,
-                    Server=False,
-                    ThickClient=False,
-                    ThinClient=False,
-                    WebClient=False
-                )
+                Env()
             )
             item = Item(self.name, attribute)
             visitor.scope.Vars[self.name.lower()] = item
@@ -215,17 +207,7 @@ class AttributeProperties(XMLData):
         if self.Name:
             attribute = GlobalObject( # TODO: attribs?, methods?
                 self.Name,
-                Context(
-                    Client=False,
-                    ExternalConnection=False,
-                    MobileApplication=False,
-                    MobileClient=False,
-                    MobileServer=False,
-                    Server=False,
-                    ThickClient=False,
-                    ThinClient=False,
-                    WebClient=False
-                )
+                Env()
             )
             item = Item(self.Name, attribute)
             visitor.scope.Vars[self.Name.lower()] = item
@@ -531,17 +513,7 @@ class TabularSectionProperties(XMLData):
         if self.Name:
             attribute = GlobalObject( # TODO: attribs?, methods?
                 self.Name,
-                Context(
-                    Client=False,
-                    ExternalConnection=False,
-                    MobileApplication=False,
-                    MobileClient=False,
-                    MobileServer=False,
-                    Server=False,
-                    ThickClient=False,
-                    ThinClient=False,
-                    WebClient=False
-                )
+                Env()
             )
             item = Item(self.Name, attribute)
             visitor.scope.Vars[self.Name.lower()] = item
@@ -1071,39 +1043,12 @@ class CommonModuleProperties(XMLData):
         if self.Name:
             attribute = GlobalObject( # TODO: attribs?, methods?
                 self.Name,
-                Context(
-                    Client=False,
-                    ExternalConnection=False,
-                    MobileApplication=False,
-                    MobileClient=False,
-                    MobileServer=False,
-                    Server=False,
-                    ThickClient=False,
-                    ThinClient=False,
-                    WebClient=False
-                )
+                Env()
             )
             item = Item(self.Name, attribute)
             visitor.scope.Vars[self.Name.lower()] = item
 
-        name = 'ThisObject'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        visitor.scope.Vars[name.lower()] = item
-        visitor.scope.Vars['этотобъект'] = item
+        context.CommonModule.fill(visitor.scope)
 
         visitor.visit_CommonModuleProperties(self)
         if self.Synonym is not None:
@@ -1256,44 +1201,6 @@ class ConfigurationChildObjects(XMLData):
         self.visit_CommonModules(visitor)
         self.visit_Documents(visitor)
         visitor.leave_ConfigurationChildObjects(self)
-
-        name = 'GlobalSearch'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        visitor.scope.Vars[name.lower()] = item
-        visitor.scope.Vars['глобальныйпоиск'] = item
-
-        name = 'StandardGlobalSearchType'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        visitor.scope.Vars[name.lower()] = item
-        visitor.scope.Vars['стандартныйвидглобальногопоиска'] = item
 
         dirname = os.path.dirname(self._path)
         module = ModuleFile(
@@ -1496,125 +1403,7 @@ class DocumentChildObjects(XMLData):
         self.visit_Forms(visitor)
         visitor.leave_DocumentChildObjects(self)
 
-        name = 'AdditionalProperties'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        scope.Vars[name.lower()] = item
-        scope.Vars['дополнительныесвойства'] = item
-
-        name = 'RegisterRecords'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        scope.Vars[name.lower()] = item
-        scope.Vars['движения'] = item
-
-        name = 'DataExchange'
-        attribute = GlobalObject( # TODO: attribs?, methods?
-            name,
-            Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, attribute)
-        scope.Vars[name.lower()] = item
-        scope.Vars['обменданными'] = item
-
-        name = 'PointInTime'
-        method = GlobalMethod(
-            name,
-            retval=True,
-            params=[],
-            context=Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, method)
-        visitor.scope.Methods[name.lower()] = item
-        visitor.scope.Methods['моментвремени'] = item
-
-        name = 'Metadata'
-        method = GlobalMethod(
-            name,
-            retval=True,
-            params=[],
-            context=Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, method)
-        visitor.scope.Methods[name.lower()] = item
-        visitor.scope.Methods['метаданные'] = item
-
-        name = 'IsNew'
-        method = GlobalMethod(
-            name,
-            retval=True,
-            params=[],
-            context=Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, method)
-        visitor.scope.Methods[name.lower()] = item
-        visitor.scope.Methods['этоновый'] = item
+        context.DocumentObject.fill(scope)
 
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
@@ -1669,26 +1458,7 @@ class Document(XMLFile):
 
         visitor.close_scope()
 
-        name = 'GetTemplate'
-        method = GlobalMethod(
-            name,
-            retval=True,
-            params=[P('Template', True)],
-            context=Context(
-                Client=False,
-                ExternalConnection=False,
-                MobileApplication=False,
-                MobileClient=False,
-                MobileServer=False,
-                Server=False,
-                ThickClient=False,
-                ThinClient=False,
-                WebClient=False
-            )
-        )
-        item = Item(name, method)
-        visitor.scope.Methods[name.lower()] = item
-        visitor.scope.Methods['получитьмакет'] = item
+        context.DocumentManager.fill(visitor.scope)
 
         modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
         visitor.modules.append(
