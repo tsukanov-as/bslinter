@@ -3,14 +3,16 @@
 # license that can be found in the LICENSE file.
 
 from abc import ABC, abstractmethod
+from output.result import Result
 
 class Plugin(ABC):
 
+    @abstractmethod
     def __init__(self, path: str, src: str):
         pass
 
     @abstractmethod
-    def close(self) -> str:
+    def close(self) -> Result:
         pass
 
 class Visitor:
@@ -100,6 +102,8 @@ class Visitor:
 
     def leave_FuncSign(self, node):
         self.perform('leave_FuncSign', node)
+
+    # TODO: visit_Expr(), которая вызывается один раз на выражение
 
     # BasicLitExpr
 
