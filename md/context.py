@@ -39,6 +39,7 @@ class Context():
                 scope.Methods[name.lower()] = prop.item
 
 class ClientApplicationForm(Context):
+    # TODO: выделить в отдельный класс расширения формы для документов, справочников и т.д.
     attribs = [
         attrib('UUID', 'УникальныйИдентификатор', Env()),
         attrib('ThisObject', 'ЭтотОбъект', Env()),
@@ -53,6 +54,7 @@ class ClientApplicationForm(Context):
         attrib('FormOwner', 'ВладелецФормы', Env()),
         attrib('CurrentItem', 'ТекущийЭлемент', Env()),
         attrib('CommandBar', 'КоманднаяПанель', Env()),
+        attrib('Title', 'Заголовок', Env()),
     ]
     methods = [
         method('FormAttributeToValue', 'РеквизитФормыВЗначение', True, [P('AttributeName', True), P('Type', False)], Env()),
@@ -68,6 +70,12 @@ class ClientApplicationForm(Context):
         method('ChangeAttributes', 'ИзменитьРеквизиты', False, [P('AttributesToBeAdded', False), P('AttributesToBeDeleted', False)], Env()),
         method('NotifyChoice', 'ОповеститьОВыборе', False, [P('SelectionValue', True)], Env()),
         method('ShowChooseFromList', 'ПоказатьВыборИзСписка', False, [P('NotifyOnCloseDescription', True), P('ValueList', True), P('FormItem', False), P('InitialValue', False)], Env()),
+        method('CheckFilling', 'ПроверитьЗаполнение', True, [], Env()),
+        method('ClearMarkIncomplete', 'ОтключитьОтметкуНезаполненного', False, [], Env()),
+        method('IsOpen', 'Открыта', True, [], Env()),
+        method('Activate', 'Активизировать', False, [], Env()),
+        method('SetFormFunctionalOptionParameters', 'УстановитьПараметрыФункциональныхОпцийФормы', False, [P('ParametersToBeSpecified', True), P('ParametersToBeReset', False)], Env()),
+        method('ShowChooseFromMenu', 'ПоказатьВыборИзМеню', False, [P('NotifyDescriptionOnCompletion', True), P('ListOfValues', True), P('FormItem', False)], Env()),
     ]
 
 class CommonModule(Context):
@@ -78,11 +86,14 @@ class CommonModule(Context):
 class DocumentObject(Context):
     standard = [
         attrib('Ref', 'Ссылка', Env()),
+        attrib('Number', 'Номер', Env()),
+        attrib('Date', 'Дата', Env()),
     ]
     attribs = [
         attrib('AdditionalProperties', 'ДополнительныеСвойства', Env()),
         attrib('RegisterRecords', 'Движения', Env()),
         attrib('DataExchange', 'ОбменДанными', Env()),
+        attrib('DeletionMark', 'ПометкаУдаления', Env()),
     ]
     methods = [
         method('PointInTime', 'МоментВремени', True, [], Env()),
@@ -90,12 +101,15 @@ class DocumentObject(Context):
         method('IsNew', 'ЭтоНовый', True, [], Env()),
         method('CheckFilling', 'ПроверитьЗаполнение', True, [], Env()),
         method('Fill', 'Заполнить', False, [P('FillingData', True)], Env()),
+        method('SetNewNumber', 'УстановитьНовыйНомер', False, [P('NumberPrefix', False)], Env()),
+        method('SetNewObjectRef', 'УстановитьСсылкуНового', False, [P('Reference', True)], Env()),
     ]
 
 class DocumentManager(Context):
 
     methods = [
         method('GetTemplate', 'ПолучитьМакет', True, [P('Template', True)], Env()),
+        method('EmptyRef', 'ПустаяСсылка', True, [], Env()),
     ]
 
 class DocumentStandardAttributes(Context):

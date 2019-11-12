@@ -1954,6 +1954,9 @@ methods = [
     GlobalMethod('ПолучитьСклоненияСтроки', True, [P('DeclinedString', True), P('StringDescription', False), P('FormatString', False)], Env(True, True, True, False, True, True, True, False, False, False)),
     GlobalMethod('GetStringDeclensionsByNumber', True, [P('String', True), P('Number', True), P('UnitsOfMeasurement', False), P('StringDescription', False), P('FormatString', False), P('NumberFormatString', False)], Env(True, True, True, False, True, True, True, False, False, False)),
     GlobalMethod('ПолучитьСклоненияСтрокиПоЧислу', True, [P('String', True), P('Number', True), P('UnitsOfMeasurement', False), P('StringDescription', False), P('FormatString', False), P('NumberFormatString', False)], Env(True, True, True, False, True, True, True, False, False, False)),
+    # deprecated
+    GlobalMethod('ClientApplicationInterfaceCurrentVariant', True, [], Env()),
+    GlobalMethod('ТекущийВариантИнтерфейсаКлиентскогоПриложения', True, [], Env()),
 ]
 
 scope = Scope()
