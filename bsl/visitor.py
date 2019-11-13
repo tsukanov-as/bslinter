@@ -3,7 +3,9 @@
 # license that can be found in the LICENSE file.
 
 from abc import ABC, abstractmethod
-from output.result import Result
+
+class PluginResult:
+    pass
 
 class Plugin(ABC):
 
@@ -12,7 +14,7 @@ class Plugin(ABC):
         pass
 
     @abstractmethod
-    def close(self) -> Result:
+    def close(self) -> PluginResult:
         pass
 
 class Visitor:

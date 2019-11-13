@@ -4,7 +4,8 @@
 
 from enum import Enum, auto
 from dataclasses import dataclass
-from output.result import Result
+from abc import abstractmethod
+from bsl.visitor import Plugin, PluginResult
 from typing import List, Optional
 
 class Severity(Enum):
@@ -37,7 +38,13 @@ class Issue:
     effort: int
     location: Location
 
-class Issues(Result):
+class Issues(PluginResult):
 
     def __init__(self, items):
         self.items: List[Issue] = items
+
+class IssueCollector(Plugin):
+
+    @abstractmethod
+    def close(self) -> Issues:
+        pass

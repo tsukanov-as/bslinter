@@ -2,13 +2,14 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from bsl.visitor import Plugin
 import bsl.ast as ast
 from typing import List
-from output.issues import Issue, Issues, Kind, Severity, Location
+from output.issues import Issue, Issues, Kind, Severity, Location, IssueCollector
 import os.path
 
-class CheckingClosingComments(Plugin):
+class CheckingClosingComments(IssueCollector):
+
+    # TODO: более конкретные сообщения: "Пропущен пробел", "Не хватает скобок" ...
 
     def __init__(self, path, src):
 
