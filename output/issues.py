@@ -5,7 +5,7 @@
 from enum import Enum, auto
 from dataclasses import dataclass
 from abc import abstractmethod
-from bsl.visitor import Plugin, PluginResult
+from plugins import Plugin, PluginResult
 from typing import List, Optional
 
 class Severity(Enum):

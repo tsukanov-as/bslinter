@@ -3,19 +3,11 @@
 # license that can be found in the LICENSE file.
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Dict, Callable
 from enum import Enum, auto
 from bsl.glob import scope as global_scope
 from bsl.ast import Scope
-
-class Plugin(ABC):
-
-    def __init__(self):
-        pass
-
-    @abstractmethod
-    def close(self) -> str:
-        pass
+from plugins import Plugin
 
 class ModuleKinds(Enum):
     ObjectModule = auto()
@@ -35,17 +27,17 @@ class ModuleFile:
 
 class Visitor:
 
-    def __init__(self, plugins):
+    def __init__(self, plugins: List[Plugin]):
 
         methods = [func for func in dir(self)
                             if callable(getattr(self, func))
                                 and (func.startswith("visit_")
                                      or func.startswith("leave_"))]
 
-        self.hooks = {}
+        self.hooks: Dict[str, List[Callable]] = {}
 
         for name in methods:
-            hooks = []
+            hooks: List[Callable] = []
             self.hooks[name] = hooks
             for plugin in plugins:
                 if hook := getattr(plugin, name, None):

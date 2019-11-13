@@ -2,34 +2,22 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from abc import ABC, abstractmethod
-
-class PluginResult:
-    pass
-
-class Plugin(ABC):
-
-    @abstractmethod
-    def __init__(self, path: str, src: str):
-        pass
-
-    @abstractmethod
-    def close(self) -> PluginResult:
-        pass
+from typing import List, Dict, Callable
+from plugins import Plugin
 
 class Visitor:
 
-    def __init__(self, plugins):
+    def __init__(self, plugins: List[Plugin]):
 
         methods = [func for func in dir(self)
                             if callable(getattr(self, func))
                                 and (func.startswith("visit_")
                                      or func.startswith("leave_"))]
 
-        self.hooks = {}
+        self.hooks: Dict[str, List[Callable]] = {}
 
         for name in methods:
-            hooks = []
+            hooks: List[Callable] = []
             self.hooks[name] = hooks
             for plugin in plugins:
                 if hook := getattr(plugin, name, None):
