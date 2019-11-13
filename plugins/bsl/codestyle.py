@@ -27,8 +27,8 @@ class CheckingClosingComments(Plugin):
     def visit_MethodDecl(self, node: ast.MethodDecl):
         line = node.Place.EndLine
         if comment := self.comments.get(line):
-            if comment.rstrip() != f' {node.Sign.Name}()':
-                self.issue(f'Метод "{node.Sign.Name}()" имеет неправильный замыкающий комментарий.', node.Place)
+            if comment.text.rstrip() != f' {node.Sign.Name}()':
+                self.issue(f'Метод "{node.Sign.Name}()" имеет неправильный замыкающий комментарий.', comment)
 
     def visit_PrepRegionInst(self, node: ast.PrepRegionInst):
         self.region_stack.append(node.Name)
@@ -37,10 +37,10 @@ class CheckingClosingComments(Plugin):
         line = node.Place.EndLine
         region_name = self.region_stack.pop()
         if comment := self.comments.get(line):
-            if comment.rstrip() != f' {region_name}':
-                self.issue(f'Область "{region_name}" имеет неправильный замыкающий комментарий.', node.Place)
+            if comment.text.rstrip() != f' {region_name}':
+                self.issue(f'Область "{region_name}" имеет неправильный замыкающий комментарий.', comment)
 
-    def issue(self, msg, place):
+    def issue(self, msg, comment):
         self.errors.append(Issue(
             Kind.CODE_SMELL,
             Severity.INFO,
@@ -48,9 +48,9 @@ class CheckingClosingComments(Plugin):
             2,
             Location(
                 os.path.normpath(self.path),
-                place.EndLine,
-                place.EndLine,
-                0,
-                1
+                comment.line,
+                comment.line,
+                comment.column - 2, # - //
+                comment.column + len(comment.text),
             )
         ))

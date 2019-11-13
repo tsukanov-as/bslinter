@@ -29,12 +29,21 @@ class Item:
 
 class Place:
 
-    def __init__(self, begpos, endpos, begline, endline):
+    def __init__(self, begpos, endpos, begline, endline, begcolumn, endcolumn):
         self.BegPos: int = begpos
         self.EndPos: int = endpos
         self.BegLine: int = begline
         self.EndLine: int = endline
+        self.BegColumn: int = begcolumn
+        self.EndColumn: int = endcolumn
 
+class Comment:
+
+    def __init__(self, text, pos, line, column):
+        self.text = text
+        self.pos = pos
+        self.line = line
+        self.column = column
 
 class Node:
 
@@ -54,7 +63,7 @@ class Module(Node):
         self.Auto: List[AutoDecl] = auto
         self.Body: List[Stmt] = statements
         self.Interface: List[Item] = interface
-        self.Comments: Dict[int, str] = comments
+        self.Comments: Dict[int, Comment] = comments
 
     def visit(self, visitor: Visitor):
         visitor.visit_Module(self)
@@ -96,7 +105,7 @@ class GlobalObject(Decl):
         self.Env: Env = env
         self.Attribs: Optional[List[str]] = attribs
         self.Methods: Optional[List[GlobalMethod]] = methods
-        self.Place: Place = Place(0, 0, 0, 0)
+        self.Place: Place = Place(0, 0, 0, 0, 0, 0)
 
     def visit(self, visitor: Visitor):
         pass # не посещается
@@ -108,7 +117,7 @@ class GlobalMethodParameter(Decl):
     def __init__(self, name, required):
         self.Name: str = name
         self.Required: bool = required
-        self.Place: Place = Place(0, 0, 0, 0)
+        self.Place: Place = Place(0, 0, 0, 0, 0, 0)
 
     def visit(self, visitor: Visitor):
         pass # не посещается
@@ -122,7 +131,7 @@ class GlobalMethod(Decl):
         self.Env: Env = env
         self.Params: List[GlobalMethodParameter] = params
         self.RetVal: bool = retval
-        self.Place: Place = Place(0, 0, 0, 0)
+        self.Place: Place = Place(0, 0, 0, 0, 0, 0)
 
     def visit(self, visitor: Visitor):
         pass # не посещается

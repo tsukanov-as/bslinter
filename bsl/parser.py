@@ -74,12 +74,12 @@ init_of_expr = {
     Keywords.NULL,
 }
 
-Marker = namedtuple('Marker', 'pos line')
+Marker = namedtuple('Marker', 'pos line column')
 
 class ParserException(Exception):
     def __init__(self, text: str, marker: Marker):
         self.text = text
-        (self.pos, self.line) = marker
+        (self.pos, self.line, self.column) = marker
 
 class UnexpectedSyntax(ParserException):
     pass
@@ -110,6 +110,10 @@ class Parser:
 
         self.cur_line: int = 1
         self.end_line: int = 1
+        self.line_pos: int = 0
+
+        self.beg_column: int = 0
+        self.end_column: int = 0
 
         self.char: str = ""
         self.lit: str = ""
@@ -128,7 +132,7 @@ class Parser:
         self.directive: Optional[Directives] = None
         self.interface: List[ast.Item] = []
 
-        self.comments: Dict[int, str] = {}
+        self.comments: Dict[int, ast.Comment] = {}
 
         self.errors: List[Error] = []
 
@@ -143,11 +147,13 @@ class Parser:
 
         self.end_pos = self.cur_pos
         self.end_line = self.cur_line
+        self.end_column = self.cur_pos - self.line_pos
 
         self.val = None
 
         if self.lit[-1:] == '\n':
             self.cur_line += 1
+            self.line_pos = self.cur_pos
 
         while 1:
 
@@ -157,9 +163,11 @@ class Parser:
             while self.char.isspace():
                 if self.char == '\n':
                     self.cur_line += 1
+                    self.line_pos = self.cur_pos + 1
                 self.next()
 
             self.beg_pos = self.cur_pos
+            self.beg_column = self.cur_pos - self.line_pos
 
             if self.char.isalpha() or self.char == '_':
 
@@ -258,7 +266,7 @@ class Parser:
                     if pos >= 0:
                         self.cur_pos = pos
                         self.char = '\n'
-                        self.comments[self.cur_line] = self.src[beg:self.cur_pos]
+                        self.comments[self.cur_line] = ast.Comment(self.src[beg:self.cur_pos], beg, self.cur_line, beg - self.line_pos)
                     else:
                         self.cur_pos = len(self.src)
                         self.char = ''
@@ -296,7 +304,7 @@ class Parser:
                 self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Directive expected', Marker(self.cur_pos, self.cur_line))
+                    raise UnexpectedChar('Directive expected', self.mark_at(self.cur_pos))
 
                 # scan ident
                 beg = self.cur_pos
@@ -308,7 +316,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown directive: "{self.lit}"', Marker(self.cur_pos - len(self.lit), self.cur_line))
+                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.mark_at(self.cur_pos - len(self.lit)))
 
             elif self.char == '#':
 
@@ -318,10 +326,11 @@ class Parser:
                 while self.char.isspace():
                     if self.char == '\n':
                         self.cur_line += 1
+                        self.line_pos = self.cur_pos + 1
                     self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Preprocessor instruction expected', Marker(self.cur_pos, self.cur_line))
+                    raise UnexpectedChar('Preprocessor instruction expected', self.mark_at(self.cur_pos))
 
                 # scan ident
                 beg = self.cur_pos
@@ -333,7 +342,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', Marker(self.cur_pos, self.cur_line))
+                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', self.mark_at(self.cur_pos))
 
             elif self.char == '~':
 
@@ -341,6 +350,7 @@ class Parser:
                 while self.char.isspace():
                     if self.char == '\n':
                         self.cur_line += 1
+                        self.line_pos = self.cur_pos + 1
                     self.next()
 
                 if self.char.isalnum() or self.char == '_':
@@ -362,7 +372,7 @@ class Parser:
                     self.tok = tok
                     self.next()
                 else:
-                    raise UnexpectedChar('Unknown char', Marker(self.cur_pos, self.cur_line))
+                    raise UnexpectedChar('Unknown char', self.mark_at(self.cur_pos))
 
             if not comment:
                 break
@@ -370,17 +380,20 @@ class Parser:
         return self.tok
 
     def place(self) -> ast.Place:
-        return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line)
+        return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line, self.beg_column, self.end_column)
+
+    def mark_at(self, pos):
+        return Marker(pos, self.cur_line, pos - self.line_pos)
 
     def marker(self):
-        return Marker(self.beg_pos, self.cur_line)
+        return Marker(self.beg_pos, self.cur_line, self.beg_column)
 
     def place_from(self, marker) -> ast.Place:
-        return ast.Place(marker.pos, self.end_pos, marker.line, self.end_line)
+        return ast.Place(marker.pos, self.end_pos, marker.line, self.end_line, marker.column, self.end_column)
 
     def expect(self, tok: Union[Tokens, Keywords]):
         if self.tok != tok:
-            raise UnexpectedToken(f'{tok} expected', Marker(self.beg_pos, self.cur_line))
+            raise UnexpectedToken(f'{tok} expected', self.mark_at(self.beg_pos))
 
     def error(self, text, marker: Marker):
         self.errors.append(Error(text, marker.pos, marker.line))
@@ -434,7 +447,7 @@ class Parser:
             for place in places:
                 self.error(
                     f'Undeclared method "{item.Name}"',
-                    Marker(place.BegPos, place.BegLine)
+                    Marker(place.BegPos, place.BegLine, place.BegColumn)
                 )
         self.expect(Tokens.EOF)
         return module
@@ -559,7 +572,7 @@ class Parser:
         elif tok == Keywords.NEW:
             operand = self.parseNewExpr()
         else:
-            raise UnexpectedToken('Operand expected', Marker(self.cur_pos - len(self.lit), self.cur_line))
+            raise UnexpectedToken('Operand expected', self.mark_at(self.cur_pos - len(self.lit)))
         return operand
 
     def parseStringExpr(self) -> ast.StringExpr:
@@ -606,7 +619,7 @@ class Parser:
                 self.expect(Tokens.RPAREN)
             self.scan()
         if name is None and args is None:
-            raise UnexpectedSyntax('Constructor expected', Marker(self.end_pos, self.cur_line))
+            raise UnexpectedSyntax('Constructor expected', self.mark_at(self.end_pos))
         expr = ast.NewExpr(
             name,
             args,
@@ -1175,7 +1188,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr(True)
         if call:
-            raise UnexpectedSyntax('Variable expected', Marker(var_pos, self.cur_line))
+            raise UnexpectedSyntax('Variable expected', self.mark_at(var_pos))
         self.expect(Tokens.EQL)
         self.scan()
         from_expr = self.parseExpression()
@@ -1207,7 +1220,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr(True)
         if call:
-            raise UnexpectedSyntax('Variable expected', Marker(var_pos, self.cur_line))
+            raise UnexpectedSyntax('Variable expected', self.mark_at(var_pos))
         self.expect(Keywords.IN)
         self.scan()
         collection = self.parseExpression()
@@ -1327,7 +1340,7 @@ class Parser:
         elif self.tok == Tokens.LPAREN:
             operand = self.parsePrepParenExpr()
         else:
-            raise UnexpectedToken('Preprocessor symbol expected', Marker(self.cur_pos - len(self.lit), self.cur_line))
+            raise UnexpectedToken('Preprocessor symbol expected', self.mark_at(self.cur_pos - len(self.lit)))
         return operand
 
     def parsePrepSymExpr(self) -> ast.PrepExpr:
@@ -1381,6 +1394,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepElseInst(
             self.place_from(marker)
         )
@@ -1390,6 +1404,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepEndIfInst(
             self.place_from(marker)
         )
@@ -1400,7 +1415,7 @@ class Parser:
         self.scan()
         self.expect(Tokens.IDENT)
         name = self.lit
-        self.tok = Tokens.SEMICOLON
+        self.tok = Tokens.SEMICOLON  # cheat code
         inst = ast.PrepRegionInst(
             name,
             self.place_from(marker)
@@ -1411,6 +1426,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepEndRegionInst(
             self.place_from(marker)
         )

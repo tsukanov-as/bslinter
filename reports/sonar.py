@@ -13,7 +13,7 @@ class Data:
             sort_keys=False, indent=4, ensure_ascii=False)
 
 @dataclass
-class Range(Data):
+class Range(Data): # TODO: валидация, например: startColumn < endColumn
     startLine: int
     endLine: int
     startColumn: int
