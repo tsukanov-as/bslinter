@@ -10,28 +10,35 @@ import os.path
 class CheckingDocumentStandardAttributes(IssueCollector):
 
     def __init__(self):
-
+        self.languages = {}
         self.errors: List[Issue] = []
 
     def close(self) -> Issues:
         return Issues(self.errors)
 
+    def visit_LanguageProperties(self, node: cf.LanguageProperties):
+        self.languages[node.LanguageCode] = node.Name
+
     def visit_DocumentProperties(self, node: cf.DocumentProperties):
+        if len(self.languages) < 2:
+            return
         cheklist: Dict[str, Optional[cf.StandardAttribute]] = {
+            'Ref': None,
             'Number': None,
             'Date': None,
+            'Posted': None,
+            'DeletionMark': None,
         }
         if node.StandardAttributes:
             if attribs := node.StandardAttributes.StandardAttribute:
                 for attrib in attribs:
                     if attrib.name:
                         cheklist[attrib.name] = attrib
-        x = cheklist['Number']
-        if x and x.Synonym and not x.Synonym.get('en'):
-            self.issue('Не задан английский синоним для номера', x.Synonym)
-        x = cheklist['Date']
-        if x and x.Synonym and not x.Synonym.get('en'):
-            self.issue('Не задан английский синоним для даты', x.Synonym)
+        for k, v in cheklist.items():
+            if v and v.Synonym:
+                for lang in self.languages:
+                    if not v.Synonym.get(lang):
+                        self.issue(f'Не задан синоним стандартного реквизита "{k}" для языка "{lang}"', v.Synonym)
 
     def issue(self, msg, node):
         self.errors.append(Issue(

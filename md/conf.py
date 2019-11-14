@@ -1198,6 +1198,7 @@ class ConfigurationChildObjects(XMLData):
     def visit(self, visitor: Visitor):
 
         visitor.visit_ConfigurationChildObjects(self)
+        self.visit_Languages(visitor)
         self.visit_CommonModules(visitor)
         self.visit_Documents(visitor)
         visitor.leave_ConfigurationChildObjects(self)
@@ -1238,6 +1239,17 @@ class ConfigurationChildObjects(XMLData):
                     print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
                 except Exception as e:
                     print(module.path, e)
+
+    def visit_Languages(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.Language:
+            subdirname = os.path.join(dirname, 'Languages')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo and mdo.Language:
+                    mdo.Language.visit(visitor)
 
     def visit_CommonModules(self, visitor: Visitor):
         dirname = os.path.dirname(self._path)
@@ -1742,9 +1754,21 @@ class LanguageProperties(XMLData):
     Comment:      Optional[str]
     LanguageCode: Optional[str]
 
+    def visit(self, visitor: Visitor):
+        visitor.visit_LanguageProperties(self)
+        if self.Synonym:
+            self.Synonym.visit(visitor)
+        visitor.leave_LanguageProperties(self)
+
 class Language(XMLData):
     uuid:       Optional[str]
     Properties: Optional[LanguageProperties]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_Language(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Language(self)
 
 class ReportProperties(XMLData):
     Name:                      Optional[str]

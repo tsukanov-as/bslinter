@@ -92,6 +92,22 @@ class Visitor:
     def leave_ConfigurationChildObjects(self, node):
         self.perform('leave_ConfigurationChildObjects', node)
 
+    # Language
+
+    def visit_Language(self, node):
+        self.perform('visit_Language', node)
+
+    def leave_Language(self, node):
+        self.perform('leave_Language', node)
+
+    # LanguageProperties
+
+    def visit_LanguageProperties(self, node):
+        self.perform('visit_LanguageProperties', node)
+
+    def leave_LanguageProperties(self, node):
+        self.perform('leave_LanguageProperties', node)
+
     # CommonModule
 
     def visit_CommonModule(self, node):
