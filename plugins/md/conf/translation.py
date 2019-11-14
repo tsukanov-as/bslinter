@@ -9,6 +9,8 @@ import os.path
 
 class CheckingDocumentStandardAttributes(IssueCollector):
 
+    # TODO: обработать случай, когда стандартного реквизита вообще нет в xml
+
     def __init__(self):
         self.languages = {}
         self.errors: List[Issue] = []
