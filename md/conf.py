@@ -1221,7 +1221,6 @@ class ConfigurationChildObjects(XMLData):
                         visitor.scope.Vars[item.Name.lower()] = item
                     else:
                         visitor.scope.Methods[item.Name.lower()] = item
-                print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
             except Exception as e:
                 print(module.path, e)
 
@@ -1236,7 +1235,6 @@ class ConfigurationChildObjects(XMLData):
                             visitor.scope.Vars[item.Name.lower()] = item
                         else:
                             visitor.scope.Methods[item.Name.lower()] = item
-                    print(f"\n{module.path} :: ".join([str(e) for e in p.errors]))
                 except Exception as e:
                     print(module.path, e)
 
