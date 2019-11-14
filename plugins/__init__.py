@@ -7,9 +7,5 @@ class PluginResult:
 class Plugin(ABC):
 
     @abstractmethod
-    def __init__(self, path: str, src: str):
-        pass
-
-    @abstractmethod
     def close(self) -> PluginResult:
         pass

@@ -9,10 +9,8 @@ import os.path
 
 class CheckingDocumentStandardAttributes(IssueCollector):
 
-    def __init__(self, path, src):
+    def __init__(self):
 
-        self.path = path
-        self.src = src
         self.errors: List[Issue] = []
 
     def close(self) -> Issues:
