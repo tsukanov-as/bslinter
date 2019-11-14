@@ -7,121 +7,51 @@ from decimal import Decimal
 from enum import EnumMeta
 
 import md.enums as enums
+from md.visitor import Visitor, ModuleFile, ModuleKinds
+from md.base import XMLData, XMLFile, XMLParser, fill_types
 
-import xml.etree.ElementTree as ET
+from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
+import md.forms as fm
 
-class XML:
+from bsl.ast import Item, GlobalObject, Env, VarModDecl
+from bsl.parser import Parser
 
-    def __getattr__(self, name):
-        return None
+import md.context as context
 
-    def getbasic(self, meta, name, item, raw):
-        if type(meta) == type:
-            if issubclass(meta, XML):
-                value = meta()
-                value.unmarshal(item)
-                return value
-            else:
-                value = meta(raw)
-                return value
-        elif type(meta) == EnumMeta:
-            try:
-                value = meta.get(raw)
-                return value
-            except Exception as e:
-                print(f'значение перечисления {meta} не найдено {e}')
-        else:
-            raise Exception('неизвестный тип')
-
-    def getval(self, meta, name, item, raw):
-        if meta._name == 'List':
-            c = meta.__args__[0]
-            value = getattr(self, name) or []
-            value.append(self.getbasic(c, name, item, raw))
-            return value
-        elif meta._name is None:
-            c = meta.__args__[0]
-            value = self.getbasic(c, name, item, raw)
-            return value
-        else:
-            raise Exception('неизвестный тип')
-
-    def unmarshal(self, item: ET.Element):
-        for attr in item.attrib:
-            name = attr
-            if name[0] == '{':
-                if (i := name.find('}')) >= 0:
-                    name = name[i+1:]
-            # pylint: disable=no-member
-            if meta := self.__annotations__.get(name):
-                value = self.getval(meta, name, item, item.attrib[attr])
-                setattr(self, name, value)
-        for child in item:
-            name = child.tag
-            if name[0] == '{':
-                if (i := name.find('}')) >= 0:
-                    name = name[i+1:]
-            # pylint: disable=no-member
-            if meta := self.__annotations__.get(name):
-                value = self.getval(meta, name, child, child.text)
-                setattr(self, name, value)
-        # pylint: disable=no-member
-        if meta := self.__annotations__.get('_text'):
-            setattr(self, '_text', item.text)
+import os.path
 
 #region basic
 
-Uuid = str
 DataPath = str
-MDObjectRef = str
 MDMethodRef = str
 FieldRef = str
 IncludeInCommandCategoriesType = str
-QName = str
 
-class LocalStringTypeItem(XML):
-    lang:    Optional[str]
-    content: Optional[str]
-
-class LocalStringType(XML):
-    item: List[LocalStringTypeItem]
-
-
-class MDListTypeItem(XML):
+class MDListTypeItem(XMLData):
     type:  Optional[str]
     _text: Optional[str]
 
 
-class MDListType(XML):
+class MDListType(XMLData):
     Item: List[MDListTypeItem]
 
 
-class FieldListItem(XML):
+class FieldListItem(XMLData):
     type:  Optional[str]
     _text: Optional[str]
 
 
-class FieldList(XML):
+class FieldList(XMLData):
     Field: Optional[FieldListItem]
 
 
-class ChoiceParameterLink(XML):
-    Name:        Optional[str]
-    DataPath:    Optional[str]
-    ValueChange: Optional[enums.LinkedValueChangeMode]
-
-
-class ChoiceParameterLinks(XML):
-    Link: List[ChoiceParameterLink]
-
-
-class TypeLink(XML):
+class TypeLink(XMLData):
     DataPath:    Optional[DataPath]
     LinkItem:    Optional[Decimal]
     ValueChange: Optional[enums.LinkedValueChangeMode]
 
 
-class FillValue(XML):
+class FillValue(XMLData):
     type:  Optional[str]
     _text: Optional[str]
 
@@ -130,7 +60,7 @@ class FillValue(XML):
 
 #region standard
 
-class StandardAttribute(XML):
+class StandardAttribute(XMLData):
     name:                 Optional[str]
     Synonym:              Optional[LocalStringType]
     Comment:              Optional[str]
@@ -157,10 +87,51 @@ class StandardAttribute(XML):
     #MinValue
     #MaxValue
 
-class StandardAttributes(XML):
+    _subnodes = [
+        'Synonym',
+        'ToolTip',
+        'FillValue',
+        'ChoiceParameterLinks',
+        'LinkByType',
+        'Format',
+        'EditFormat',
+    ]
+
+    _ru = {
+        'Ref': 'ссылка',
+        'Date': 'дата',
+        'Posted': 'проведен',
+    }
+
+    def visit(self, visitor: Visitor):
+
+        if self.name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.name,
+                Env()
+            )
+            item = Item(self.name, attribute)
+            visitor.scope.Vars[self.name.lower()] = item
+            if ru := self._ru.get(self.name):
+                visitor.scope.Vars[ru] = item # type: ignore
+
+        visitor.visit_StandardAttribute(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_StandardAttribute(self)
+
+class StandardAttributes(XMLData):
     StandardAttribute: List[StandardAttribute]
 
-class StandardTabularSection(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_StandardAttributes(self)
+        if nodes := self.StandardAttribute:
+            for node in nodes:
+                node.visit(visitor)
+        visitor.leave_StandardAttributes(self)
+
+class StandardTabularSection(XMLData):
     name:               Optional[str]
     Synonym:            Optional[LocalStringType]
     Comment:            Optional[str]
@@ -168,62 +139,33 @@ class StandardTabularSection(XML):
     FillChecking:       Optional[enums.FillChecking]
     StandardAttributes: Optional[StandardAttributes]
 
-class StandardTabularSections(XML):
+class StandardTabularSections(XMLData):
     StandardTabularSection: Optional[StandardTabularSection]
 
-class CharacteristicTypes(XML):
+class CharacteristicTypes(XMLData):
     # from:             Optional[MDObjectRef]
     KeyField:         Optional[FieldRef]
     TypesFilterField: Optional[FieldRef]
     # TypesFilterValue
 
-class CharacteristicValues(XML):
+class CharacteristicValues(XMLData):
     # from:        Optional[MDObjectRef]
     ObjectField: Optional[FieldRef]
     TypeField:   Optional[FieldRef]
     # ValueField
 
-class Characteristic(XML):
+class Characteristic(XMLData):
     CharacteristicTypes:  Optional[CharacteristicTypes]
     CharacteristicValues: Optional[CharacteristicValues]
 
-class Characteristics(XML):
-    Characteristic: Optional[Characteristic]
+class Characteristics(XMLData):
+    Characteristic: List[Characteristic]
 
 #endregion standard
 
-#region types
-
-class NumberQualifiers(XML):
-    Digits:         Optional[Decimal]
-    FractionDigits: Optional[Decimal]
-    AllowedSign:    Optional[enums.AllowedSign]
-
-class StringQualifiers(XML):
-    Length:        Optional[Decimal]
-    AllowedLength: Optional[enums.AllowedLength]
-
-class DateQualifiers(XML):
-    DateFractions: Optional[enums.DateFractions]
-
-class BinaryDataQualifiers(XML):
-    Length:        Optional[Decimal]
-    AllowedLength: Optional[enums.AllowedLength]
-
-class TypeDescription(XML):
-    Type:                 Optional[QName]
-    TypeSet:              Optional[QName]
-    TypeId:               Optional[Uuid]
-    NumberQualifiers:     Optional[NumberQualifiers]
-    StringQualifiers:     Optional[StringQualifiers]
-    DateQualifiers:       Optional[DateQualifiers]
-    BinaryDataQualifiers: Optional[BinaryDataQualifiers]
-
-#endregion types
-
 #region children
 
-class AttributeProperties(XML):
+class AttributeProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -255,11 +197,38 @@ class AttributeProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class Attribute(XML):
+    _subnodes = [
+        'Synonym',
+        # ...
+    ]
+
+    def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Env()
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
+        visitor.visit_AttributeProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_AttributeProperties(self)
+
+class Attribute(XMLData):
     uuid:       Optional[str]
     Properties: Optional[AttributeProperties]
 
-class DimensionProperties(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_Attribute(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Attribute(self)
+
+class DimensionProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -301,11 +270,11 @@ class DimensionProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class Dimension(XML):
+class Dimension(XMLData):
     uuid:       Optional[str]
     Properties: Optional[DimensionProperties]
 
-class ResourceProperties(XML):
+class ResourceProperties(XMLData):
     Name:                       Optional[str]
     Synonym:                    Optional[LocalStringType]
     Comment:                    Optional[str]
@@ -339,11 +308,11 @@ class ResourceProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class Resource(XML):
+class Resource(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ResourceProperties]
 
-class CommandProperties(XML):
+class CommandProperties(XMLData):
     Name:                 Optional[str]
     Synonym:              Optional[LocalStringType]
     Comment:              Optional[str]
@@ -356,11 +325,11 @@ class CommandProperties(XML):
     #Picture
     #Shortcut
 
-class Command(XML):
+class Command(XMLData):
     uuid:         Optional[str]
     Properties: Optional[CommandProperties]
 
-class AccountingFlagProperties(XML):
+class AccountingFlagProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -387,11 +356,11 @@ class AccountingFlagProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class AccountingFlag(XML):
+class AccountingFlag(XMLData):
     uuid:       Optional[str]
     Properties: Optional[AccountingFlagProperties]
 
-class ExtDimensionAccountingFlagProperties(XML):
+class ExtDimensionAccountingFlagProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -418,31 +387,31 @@ class ExtDimensionAccountingFlagProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class ExtDimensionAccountingFlag(XML):
+class ExtDimensionAccountingFlag(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ExtDimensionAccountingFlagProperties]
 
-class ColumnProperties(XML):
+class ColumnProperties(XMLData):
     Name:       Optional[str]
     Synonym:    Optional[LocalStringType]
     Comment:    Optional[str]
     Indexing:   Optional[enums.Indexing]
     References: Optional[MDListType]
 
-class Column(XML):
+class Column(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ColumnProperties]
 
-class EnumValueProperties(XML):
+class EnumValueProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
 
-class EnumValue(XML):
+class EnumValue(XMLData):
     uuid:       Optional[str]
     Properties: Optional[EnumValueProperties]
 
-class FormProperties(XML):
+class FormProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -451,18 +420,46 @@ class FormProperties(XML):
     ExtendedPresentation:  Optional[LocalStringType]
     #UsePurposes  "FixedArray"
 
-class Form(XML):
+    _subnodes = [
+        'Synonym',
+        'ExtendedPresentation',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_FormProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        self.visit_ManagedForm(visitor)
+        visitor.leave_FormProperties(self)
+
+    def visit_ManagedForm(self, visitor: Visitor):
+        if self.Name:
+            dirname = self._path.rsplit('.')[0]
+            path = os.path.join(dirname, 'Ext/Form.xml')
+            node: fm.Root = XMLParser(path, fm.Root).parse()
+            form: Optional[fm.ManagedForm] = node.Form
+            if form:
+                form.visit(visitor)
+
+class Form(XMLData):
     uuid:       Optional[str]
     Properties: Optional[FormProperties]
 
-class Template(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_Form(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Form(self)
+
+class Template(XMLData):
     uuid:         Optional[str]
     Name:         Optional[str]
     Synonym:      Optional[LocalStringType]
     Comment:      Optional[str]
     TemplateType: Optional[enums.TemplateType]
 
-class AddressingAttributeProperties(XML):
+class AddressingAttributeProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -492,11 +489,11 @@ class AddressingAttributeProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class AddressingAttribute(XML):
+class AddressingAttribute(XMLData):
     uuid:       Optional[str]
     Properties: Optional[AddressingAttributeProperties]
 
-class TabularSectionProperties(XML):
+class TabularSectionProperties(XMLData):
     Name:               Optional[str]
     Synonym:            Optional[LocalStringType]
     Comment:            Optional[str]
@@ -505,19 +502,49 @@ class TabularSectionProperties(XML):
     StandardAttributes: Optional[StandardAttributes]
     Use:                Optional[enums.AttributeUse]
 
-class TabularSectionChildObjects(XML):
+    _subnodes = [
+        'Synonym',
+        'ToolTip',
+        # ...
+    ]
+
+    def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Env()
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
+        visitor.visit_TabularSectionProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.visit_TabularSectionProperties(self)
+
+class TabularSectionChildObjects(XMLData):
     Attribute: List[Attribute]
 
-class TabularSection(XML):
+class TabularSection(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[TabularSectionProperties]
     ChildObjects: Optional[TabularSectionChildObjects]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_TabularSection(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
+        visitor.visit_TabularSection(self)
 
 #endregion children
 
 #region meta
 
-class AccountingRegisterProperties(XML):
+class AccountingRegisterProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -536,7 +563,7 @@ class AccountingRegisterProperties(XML):
     ExtendedListPresentation: Optional[LocalStringType]
     Explanation:              Optional[LocalStringType]
 
-class AccountingRegisterChildObjects(XML):
+class AccountingRegisterChildObjects(XMLData):
     Dimension: List[Dimension]
     Resource:  List[Resource]
     Attribute: List[Attribute]
@@ -544,12 +571,12 @@ class AccountingRegisterChildObjects(XML):
     Template:  List[str]
     Command:   List[Command]
 
-class AccountingRegister(XML):
+class AccountingRegister(XMLData):
     uuid:          Optional[str]
     Properties:    Optional[AccountingRegisterProperties]
     ChildObjects:  Optional[AccountingRegisterChildObjects]
 
-class AccumulationRegisterProperties(XML):
+class AccumulationRegisterProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -566,7 +593,7 @@ class AccumulationRegisterProperties(XML):
     ExtendedListPresentation: Optional[LocalStringType]
     Explanation:              Optional[LocalStringType]
 
-class AccumulationRegisterChildObjects(XML):
+class AccumulationRegisterChildObjects(XMLData):
     Resource:  List[Resource]
     Attribute: List[Attribute]
     Dimension: List[Dimension]
@@ -574,12 +601,12 @@ class AccumulationRegisterChildObjects(XML):
     Template:  List[str]
     Command:   List[Command]
 
-class AccumulationRegister(XML):
+class AccumulationRegister(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[AccumulationRegisterProperties]
     ChildObjects: Optional[AccumulationRegisterChildObjects]
 
-class BusinessProcessProperties(XML):
+class BusinessProcessProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -618,19 +645,19 @@ class BusinessProcessProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class BusinessProcessChildObjects(XML):
+class BusinessProcessChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class BusinessProcess(XML):
+class BusinessProcess(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[BusinessProcessProperties]
     ChildObjects: Optional[BusinessProcessChildObjects]
 
-class CalculationRegisterProperties(XML):
+class CalculationRegisterProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -652,7 +679,7 @@ class CalculationRegisterProperties(XML):
     ExtendedListPresentation: Optional[LocalStringType]
     Explanation:              Optional[LocalStringType]
 
-class CalculationRegisterChildObjects(XML):
+class CalculationRegisterChildObjects(XMLData):
     Resource:      List[Resource]
     Attribute:     List[Attribute]
     Dimension:     List[Dimension]
@@ -661,12 +688,12 @@ class CalculationRegisterChildObjects(XML):
     Template:      List[str]
     Command:       List[Command]
 
-class CalculationRegister(XML):
+class CalculationRegister(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[CalculationRegisterProperties]
     ChildObjects: Optional[CalculationRegisterChildObjects]
 
-class CatalogProperties(XML):
+class CatalogProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -720,19 +747,19 @@ class CatalogProperties(XML):
     ChoiceHistoryOnInput:             Optional[enums.ChoiceHistoryOnInput]
     DataHistory:                      Optional[enums.DataHistoryUse]
 
-class CatalogChildObjects(XML):
+class CatalogChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class Catalog(XML):
+class Catalog(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[CatalogProperties]
     ChildObjects: Optional[CatalogChildObjects]
 
-class ChartOfAccountsProperties(XML):
+class ChartOfAccountsProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -777,7 +804,7 @@ class ChartOfAccountsProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class ChartOfAccountsChildObjects(XML):
+class ChartOfAccountsChildObjects(XMLData):
     Attribute:                  List[Attribute]
     TabularSection:             List[TabularSection]
     AccountingFlag:             List[AccountingFlag]
@@ -786,12 +813,12 @@ class ChartOfAccountsChildObjects(XML):
     Template:                   List[str]
     Command:                    List[Command]
 
-class ChartOfAccounts(XML):
+class ChartOfAccounts(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[ChartOfAccountsProperties]
     ChildObjects: Optional[ChartOfAccountsChildObjects]
 
-class ChartOfCalculationTypesProperties(XML):
+class ChartOfCalculationTypesProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -834,19 +861,19 @@ class ChartOfCalculationTypesProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class ChartOfCalculationTypesChildObjects(XML):
+class ChartOfCalculationTypesChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class ChartOfCalculationTypes(XML):
+class ChartOfCalculationTypes(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[ChartOfCalculationTypesProperties]
     ChildObjects: Optional[ChartOfCalculationTypesChildObjects]
 
-class ChartOfCharacteristicTypesProperties(XML):
+class ChartOfCharacteristicTypesProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -895,19 +922,19 @@ class ChartOfCharacteristicTypesProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class ChartOfCharacteristicTypesChildObjects(XML):
+class ChartOfCharacteristicTypesChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class ChartOfCharacteristicTypes(XML):
+class ChartOfCharacteristicTypes(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[ChartOfCharacteristicTypesProperties]
     ChildObjects: Optional[ChartOfCharacteristicTypesChildObjects]
 
-class CommandGroupProperties(XML):
+class CommandGroupProperties(XMLData):
     Name:           Optional[str]
     Synonym:        Optional[LocalStringType]
     Comment:        Optional[str]
@@ -916,11 +943,11 @@ class CommandGroupProperties(XML):
     Category:       Optional[enums.CommandGroupCategory]
     #Picture
 
-class CommandGroup(XML):
+class CommandGroup(XMLData):
     uuid:       Optional[str]
     Properties: Optional[CommandGroupProperties]
 
-class CommonAttributeProperties(XML):
+class CommonAttributeProperties(XMLData):
     Name:                              Optional[str]
     Synonym:                           Optional[LocalStringType]
     Comment:                           Optional[str]
@@ -960,11 +987,11 @@ class CommonAttributeProperties(XML):
     #ChoiceParameters
     #Content  CommonAttributeContent
 
-class CommonAttribute(XML):
+class CommonAttribute(XMLData):
     uuid:       Optional[str]
     Properties: Optional[CommonAttributeProperties]
 
-class CommonCommandProperties(XML):
+class CommonCommandProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -978,11 +1005,11 @@ class CommonCommandProperties(XML):
     #Picture
     #Shortcut
 
-class CommonCommand(XML):
+class CommonCommand(XMLData):
     uuid:       Optional[str]
     Properties: Optional[CommonCommandProperties]
 
-class CommonFormProperties(XML):
+class CommonFormProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -993,11 +1020,11 @@ class CommonFormProperties(XML):
     Explanation:           Optional[LocalStringType]
     #UsePurposes  "FixedArray"
 
-class CommonForm(XML):
+class CommonForm(XMLData):
     uuid:       Optional[str]
     Properties: Optional[CommonFormProperties]
 
-class CommonModuleProperties(XML):
+class CommonModuleProperties(XMLData):
     Name:                      Optional[str]
     Synonym:                   Optional[LocalStringType]
     Comment:                   Optional[str]
@@ -1011,30 +1038,64 @@ class CommonModuleProperties(XML):
     Privileged:                Optional[enums.Bool]
     ReturnValuesReuse:         Optional[enums.ReturnValuesReuse]
 
-class CommonModule(XML):
+    def visit(self, visitor: Visitor):
+
+        if self.Name:
+            attribute = GlobalObject( # TODO: attribs?, methods?
+                self.Name,
+                Env()
+            )
+            item = Item(self.Name, attribute)
+            visitor.scope.Vars[self.Name.lower()] = item
+
+        context.CommonModule.fill(visitor.scope)
+        module_dir, _ = os.path.splitext(self._path)
+        module = ModuleFile(
+            ModuleKinds.CommonModule,
+            os.path.join(module_dir, 'Ext/Module.bsl'),
+            visitor.scope
+        )
+        if self.Global == enums.Bool.TRUE:
+            visitor.global_modules.append(module)
+        else:
+            visitor.modules.append(module)
+
+        visitor.visit_CommonModuleProperties(self)
+        if self.Synonym is not None:
+            self.Synonym.visit(visitor)
+        visitor.leave_CommonModuleProperties(self)
+
+class CommonModule(XMLFile):
     uuid:       Optional[str]
     Properties: Optional[CommonModuleProperties]
 
-class CommonPictureProperties(XML):
+    def visit(self, visitor: Visitor):
+
+        visitor.visit_CommonModule(self)
+        if self.Properties is not None:
+            self.Properties.visit(visitor)
+        visitor.leave_CommonModule(self)
+
+class CommonPictureProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
 
-class CommonPicture(XML):
+class CommonPicture(XMLData):
     uuid:       Optional[str]
     Properties: Optional[CommonPictureProperties]
 
-class CommonTemplateProperties(XML):
+class CommonTemplateProperties(XMLData):
     Name:         Optional[str]
     Synonym:      Optional[LocalStringType]
     Comment:      Optional[str]
     TemplateType: Optional[enums.TemplateType]
 
-class CommonTemplate(XML):
+class CommonTemplate(XMLData):
     uuid:         Optional[str]
     Properties: Optional[CommonTemplateProperties]
 
-class ConfigurationProperties(XML):
+class ConfigurationProperties(XMLData):
     Name:                                            Optional[str]
     Synonym:                                         Optional[LocalStringType]
     Comment:                                         Optional[str]
@@ -1080,7 +1141,13 @@ class ConfigurationProperties(XML):
     #UsePurposes  "FixedArray"
     #RequiredMobileApplicationPermissions  "FixedMap"
 
-class ConfigurationChildObjects(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_ConfigurationProperties(self)
+        if self.Synonym is not None:
+            self.Synonym.visit(visitor)
+        visitor.leave_ConfigurationProperties(self)
+
+class ConfigurationChildObjects(XMLData):
     AccountingRegister:         List[str]
     AccumulationRegister:       List[str]
     BusinessProcess:            List[str]
@@ -1127,12 +1194,101 @@ class ConfigurationChildObjects(XML):
     WSReference:                List[str]
     XDTOPackage:                List[str]
 
-class Configuration(XML):
+    def visit(self, visitor: Visitor):
+
+        visitor.visit_ConfigurationChildObjects(self)
+        self.visit_Languages(visitor)
+        self.visit_CommonModules(visitor)
+        self.visit_Documents(visitor)
+        visitor.leave_ConfigurationChildObjects(self)
+
+        dirname = os.path.dirname(self._path)
+        module = ModuleFile(
+            ModuleKinds.CommonModule,
+            os.path.join(dirname, 'Ext/ManagedApplicationModule.bsl'),
+            visitor.scope
+        )
+        visitor.modules.append(module)
+
+        with open(module.path, 'r', encoding='utf-8-sig') as f:
+            s = f.read()
+            p = Parser(s, module.scope)
+            try:
+                m = p.parse()
+                for item in m.Interface:
+                    if isinstance(item.Decl, VarModDecl):
+                        visitor.scope.Vars[item.Name.lower()] = item
+                    else:
+                        visitor.scope.Methods[item.Name.lower()] = item
+            except Exception as e:
+                print(module.path, e)
+
+        for module in visitor.global_modules:
+            with open(module.path, 'r', encoding='utf-8-sig') as f:
+                s = f.read()
+                p = Parser(s, module.scope)
+                try:
+                    m = p.parse()
+                    for item in m.Interface:
+                        if isinstance(item.Decl, VarModDecl):
+                            visitor.scope.Vars[item.Name.lower()] = item
+                        else:
+                            visitor.scope.Methods[item.Name.lower()] = item
+                except Exception as e:
+                    print(module.path, e)
+
+    def visit_Languages(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.Language:
+            subdirname = os.path.join(dirname, 'Languages')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo and mdo.Language:
+                    mdo.Language.visit(visitor)
+
+    def visit_CommonModules(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.CommonModule:
+            subdirname = os.path.join(dirname, 'CommonModules')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo is not None and mdo.CommonModule is not None:
+                    mdo.CommonModule.visit(visitor)
+
+    def visit_Documents(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.Document:
+            subdirname = os.path.join(dirname, 'Documents')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo is not None and mdo.Document is not None:
+                    mdo.Document.visit(visitor)
+
+class Configuration(XMLFile):
     uuid:         Optional[str]
     Properties:   Optional[ConfigurationProperties]
     ChildObjects: Optional[ConfigurationChildObjects]
 
-class ConstantProperties(XML):
+    def visit(self, visitor: Visitor):
+
+        visitor.open_scope()
+
+        visitor.visit_Configuration(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
+        visitor.leave_Configuration(self)
+
+        visitor.close_scope()
+
+class ConstantProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -1161,11 +1317,11 @@ class ConstantProperties(XML):
     #MaxValue
     #ChoiceParameters
 
-class Constant(XML):
+class Constant(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ConstantProperties]
 
-class DataProcessorProperties(XML):
+class DataProcessorProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -1176,19 +1332,19 @@ class DataProcessorProperties(XML):
     ExtendedPresentation:  Optional[LocalStringType]
     Explanation:           Optional[LocalStringType]
 
-class DataProcessorChildObjects(XML):
+class DataProcessorChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class DataProcessor(XML):
+class DataProcessor(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[DataProcessorProperties]
     ChildObjects: Optional[DataProcessorChildObjects]
 
-class DocumentProperties(XML):
+class DocumentProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -1234,19 +1390,114 @@ class DocumentProperties(XML):
     ChoiceHistoryOnInput:             Optional[enums.ChoiceHistoryOnInput]
     DataHistory:                      Optional[enums.DataHistoryUse]
 
-class DocumentChildObjects(XML):
+    _subnodes = [
+        'Synonym',
+        'StandardAttributes',
+        'Characteristics',
+        'BasedOn',
+        'InputByString',
+        'RegisterRecords',
+        'DataLockFields',
+        'ObjectPresentation',
+        'ExtendedObjectPresentation',
+        'ListPresentation',
+        'ExtendedListPresentation',
+        'Explanation',
+    ]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_DocumentProperties(self)
+        for name in self._subnodes:
+            if node := getattr(self, name):
+                node.visit(visitor)
+        visitor.leave_DocumentProperties(self)
+
+class DocumentChildObjects(XMLData):
     Attribute:      List[Attribute]
     Form:           List[str]
     TabularSection: List[TabularSection]
     Template:       List[str]
     Command:        List[Command]
 
-class Document(XML):
+    def visit(self, visitor: Visitor):
+
+        scope = visitor.open_scope()
+
+        visitor.visit_DocumentChildObjects(self)
+        self.visit_Attributes(visitor)
+        self.visit_TabularSections(visitor)
+        self.visit_Commands(visitor)
+        visitor.close_scope()
+        self.visit_Forms(visitor)
+        visitor.leave_DocumentChildObjects(self)
+
+        context.DocumentObject.fill(scope)
+
+        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ObjectModule,
+                os.path.join(modules_dir, 'ObjectModule.bsl'),
+                scope
+            )
+        )
+
+    def visit_Attributes(self, visitor):
+        if Attribute := self.Attribute:
+            for node in Attribute:
+                node.visit(visitor)
+
+    def visit_TabularSections(self, visitor):
+        if TabularSection := self.TabularSection:
+            for node in TabularSection:
+                node.visit(visitor)
+
+    def visit_Commands(self, visitor):
+        if Command := self.Command:
+            for node in Command:
+                node.visit(visitor)
+
+    def visit_Forms(self, visitor: Visitor):
+        dirname = self._path.rsplit('.')[0]
+        if names := self.Form:
+            subdirname = os.path.join(dirname, 'Forms')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo and mdo.Form:
+                    mdo.Form.visit(visitor)
+
+class Document(XMLFile):
     uuid:         Optional[str]
     Properties:   Optional[DocumentProperties]
     ChildObjects: Optional[DocumentChildObjects]
 
-class DocumentJournalProperties(XML):
+    def visit(self, visitor: Visitor):
+
+        visitor.open_scope()
+
+        visitor.visit_Document(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        if self.ChildObjects:
+            self.ChildObjects.visit(visitor)
+        visitor.leave_Document(self)
+
+        visitor.close_scope()
+
+        context.DocumentManager.fill(visitor.scope)
+
+        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        visitor.modules.append(
+            ModuleFile(
+                ModuleKinds.ManagerModule,
+                os.path.join(modules_dir, 'ManagerModule.bsl'),
+                visitor.scope
+            )
+        )
+
+class DocumentJournalProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -1260,18 +1511,18 @@ class DocumentJournalProperties(XML):
     ExtendedListPresentation: Optional[LocalStringType]
     Explanation:              Optional[LocalStringType]
 
-class DocumentJournalChildObjects(XML):
+class DocumentJournalChildObjects(XMLData):
     Column:   List[Column]
     Form:     List[str]
     Template: List[str]
     Command:  List[Command]
 
-class DocumentJournal(XML):
+class DocumentJournal(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[DocumentJournalProperties]
     ChildObjects: Optional[DocumentJournalChildObjects]
 
-class DocumentNumeratorProperties(XML):
+class DocumentNumeratorProperties(XMLData):
     Name:                Optional[str]
     Synonym:             Optional[LocalStringType]
     Comment:             Optional[str]
@@ -1281,11 +1532,11 @@ class DocumentNumeratorProperties(XML):
     NumberPeriodicity:   Optional[enums.DocumentNumberPeriodicity]
     CheckUnique:         Optional[enums.Bool]
 
-class DocumentNumerator(XML):
+class DocumentNumerator(XMLData):
     uuid:       Optional[str]
     Properties: Optional[DocumentNumeratorProperties]
 
-class EnumProperties(XML):
+class EnumProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -1303,18 +1554,18 @@ class EnumProperties(XML):
     Explanation:              Optional[LocalStringType]
     ChoiceHistoryOnInput:     Optional[enums.ChoiceHistoryOnInput]
 
-class EnumChildObjects(XML):
+class EnumChildObjects(XMLData):
     EnumValue: List[EnumValue]
     Form:      List[str]
     Template:  List[str]
     Command:   List[Command]
 
-class Enum(XML):
+class Enum(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[EnumProperties]
     ChildObjects: Optional[EnumChildObjects]
 
-class EventSubscriptionProperties(XML):
+class EventSubscriptionProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
@@ -1322,11 +1573,11 @@ class EventSubscriptionProperties(XML):
     Handler: Optional[MDMethodRef]
     #Event  AliasedStringType
 
-class EventSubscription(XML):
+class EventSubscription(XMLData):
     uuid:       Optional[str]
     Properties: Optional[EventSubscriptionProperties]
 
-class ExchangePlanProperties(XML):
+class ExchangePlanProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -1364,19 +1615,19 @@ class ExchangePlanProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class ExchangePlanChildObjects(XML):
+class ExchangePlanChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class ExchangePlan(XML):
+class ExchangePlan(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[ExchangePlanProperties]
     ChildObjects: Optional[ExchangePlanChildObjects]
 
-class FilterCriterionProperties(XML):
+class FilterCriterionProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -1389,16 +1640,16 @@ class FilterCriterionProperties(XML):
     ExtendedListPresentation: Optional[LocalStringType]
     Explanation:              Optional[LocalStringType]
 
-class FilterCriterionChildObjects(XML):
+class FilterCriterionChildObjects(XMLData):
     Form:    List[str]
     Command: List[Command]
 
-class FilterCriterion(XML):
+class FilterCriterion(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[FilterCriterionProperties]
     ChildObjects: Optional[FilterCriterionChildObjects]
 
-class FunctionalOptionProperties(XML):
+class FunctionalOptionProperties(XMLData):
     Name:              Optional[str]
     Synonym:           Optional[LocalStringType]
     Comment:           Optional[str]
@@ -1406,40 +1657,40 @@ class FunctionalOptionProperties(XML):
     PrivilegedGetMode: Optional[enums.Bool]
     #Content  FuncOptionContentType
 
-class FunctionalOption(XML):
+class FunctionalOption(XMLData):
     uuid:       Optional[str]
     Properties: Optional[FunctionalOptionProperties]
 
-class FunctionalOptionsParameterProperties(XML):
+class FunctionalOptionsParameterProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
     Use:     Optional[MDListType]
 
-class FunctionalOptionsParameter(XML):
+class FunctionalOptionsParameter(XMLData):
     uuid:       Optional[str]
     Properties: Optional[FunctionalOptionsParameterProperties]
 
-class Method(XML):
+class Method(XMLData):
     Name:     Optional[str]
     Synonym:  Optional[LocalStringType]
     Comment:  Optional[str]
     HTTPMethod: Optional[enums.HTTPMethod]
 
-class URLTemplateChildObjects(XML):
+class URLTemplateChildObjects(XMLData):
     Method: List[Method]
 
-class URLTemplateProperties(XML):
+class URLTemplateProperties(XMLData):
     Name:     Optional[str]
     Synonym:  Optional[LocalStringType]
     Comment:  Optional[str]
     Template: Optional[str]
 
-class URLTemplate(XML):
+class URLTemplate(XMLData):
     Properties:   Optional[URLTemplateProperties]
     ChildObjects: Optional[URLTemplateChildObjects]
 
-class HTTPServiceProperties(XML):
+class HTTPServiceProperties(XMLData):
     Name:          Optional[str]
     Synonym:       Optional[LocalStringType]
     Comment:       Optional[str]
@@ -1447,15 +1698,15 @@ class HTTPServiceProperties(XML):
     ReuseSessions: Optional[enums.SessionReuseMode]
     SessionMaxAge: Optional[Decimal]
 
-class HTTPServiceChildObjects(XML):
+class HTTPServiceChildObjects(XMLData):
     URLTemplate: List[URLTemplate]
 
-class HTTPService(XML):
+class HTTPService(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[HTTPServiceProperties]
     ChildObjects: Optional[HTTPServiceChildObjects]
 
-class InformationRegisterProperties(XML):
+class InformationRegisterProperties(XMLData):
     Name:                           Optional[str]
     Synonym:                        Optional[LocalStringType]
     Comment:                        Optional[str]
@@ -1481,7 +1732,7 @@ class InformationRegisterProperties(XML):
     Explanation:                    Optional[LocalStringType]
     DataHistory:                    Optional[enums.DataHistoryUse]
 
-class InformationRegisterChildObjects(XML):
+class InformationRegisterChildObjects(XMLData):
     Resource:  List[Resource]
     Attribute: List[Attribute]
     Dimension: List[Dimension]
@@ -1489,22 +1740,34 @@ class InformationRegisterChildObjects(XML):
     Template:  List[str]
     Command:   List[Command]
 
-class InformationRegister(XML):
+class InformationRegister(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[InformationRegisterProperties]
     ChildObjects: Optional[InformationRegisterChildObjects]
 
-class LanguageProperties(XML):
+class LanguageProperties(XMLData):
     Name:         Optional[str]
     Synonym:      Optional[LocalStringType]
     Comment:      Optional[str]
     LanguageCode: Optional[str]
 
-class Language(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_LanguageProperties(self)
+        if self.Synonym:
+            self.Synonym.visit(visitor)
+        visitor.leave_LanguageProperties(self)
+
+class Language(XMLData):
     uuid:       Optional[str]
     Properties: Optional[LanguageProperties]
 
-class ReportProperties(XML):
+    def visit(self, visitor: Visitor):
+        visitor.visit_Language(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        visitor.leave_Language(self)
+
+class ReportProperties(XMLData):
     Name:                      Optional[str]
     Synonym:                   Optional[LocalStringType]
     Comment:                   Optional[str]
@@ -1521,28 +1784,28 @@ class ReportProperties(XML):
     ExtendedPresentation:      Optional[LocalStringType]
     Explanation:               Optional[LocalStringType]
 
-class ReportChildObjects(XML):
+class ReportChildObjects(XMLData):
     Attribute:      List[Attribute]
     TabularSection: List[TabularSection]
     Form:           List[str]
     Template:       List[str]
     Command:        List[Command]
 
-class Report(XML):
+class Report(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[ReportProperties]
     ChildObjects: Optional[ReportChildObjects]
 
-class RoleProperties(XML):
+class RoleProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
 
-class Role(XML):
+class Role(XMLData):
     uuid:       Optional[str]
     Properties: Optional[RoleProperties]
 
-class ScheduledJobProperties(XML):
+class ScheduledJobProperties(XMLData):
     Name:                     Optional[str]
     Synonym:                  Optional[LocalStringType]
     Comment:                  Optional[str]
@@ -1554,11 +1817,11 @@ class ScheduledJobProperties(XML):
     RestartCountOnFailure:    Optional[Decimal]
     RestartIntervalOnFailure: Optional[Decimal]
 
-class ScheduledJob(XML):
+class ScheduledJob(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ScheduledJobProperties]
 
-class SequenceProperties(XML):
+class SequenceProperties(XMLData):
     Name:                  Optional[str]
     Synonym:               Optional[LocalStringType]
     Comment:               Optional[str]
@@ -1567,25 +1830,25 @@ class SequenceProperties(XML):
     RegisterRecords:       Optional[MDListType]
     DataLockControlMode:   Optional[enums.DefaultDataLockControlMode]
 
-class SequenceChildObjects(XML):
+class SequenceChildObjects(XMLData):
     Dimension: List[Dimension]
 
-class Sequence(XML):
+class Sequence(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[SequenceProperties]
     ChildObjects: Optional[SequenceChildObjects]
 
-class SessionParameterProperties(XML):
+class SessionParameterProperties(XMLData):
     Name:    Optional[str]
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
     Type:    Optional[TypeDescription]
 
-class SessionParameter(XML):
+class SessionParameter(XMLData):
     uuid:         Optional[str]
     Properties: Optional[SessionParameterProperties]
 
-class SettingsStorageProperties(XML):
+class SettingsStorageProperties(XMLData):
     Name:              Optional[str]
     Synonym:           Optional[LocalStringType]
     Comment:           Optional[str]
@@ -1594,16 +1857,16 @@ class SettingsStorageProperties(XML):
     AuxiliarySaveForm: Optional[MDObjectRef]
     AuxiliaryLoadForm: Optional[MDObjectRef]
 
-class SettingsStorageChildObjects(XML):
+class SettingsStorageChildObjects(XMLData):
     Form:     List[str]
     Template: List[str]
 
-class SettingsStorage(XML):
+class SettingsStorage(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[SettingsStorageProperties]
     ChildObjects: Optional[SettingsStorageChildObjects]
 
-class SubsystemProperties(XML):
+class SubsystemProperties(XMLData):
     Name:                      Optional[str]
     Synonym:                   Optional[LocalStringType]
     Comment:                   Optional[str]
@@ -1613,15 +1876,15 @@ class SubsystemProperties(XML):
     Content:                   Optional[MDListType]
     #Picture
 
-class SubsystemChildObjects(XML):
+class SubsystemChildObjects(XMLData):
     Subsystem: List[str]
 
-class Subsystem(XML):
+class Subsystem(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[SubsystemProperties]
     ChildObjects: Optional[SubsystemChildObjects]
 
-class TaskProperties(XML):
+class TaskProperties(XMLData):
     Name:                             Optional[str]
     Synonym:                          Optional[LocalStringType]
     Comment:                          Optional[str]
@@ -1663,7 +1926,7 @@ class TaskProperties(XML):
     ExtendedListPresentation:         Optional[LocalStringType]
     Explanation:                      Optional[LocalStringType]
 
-class TaskChildObjects(XML):
+class TaskChildObjects(XMLData):
     Attribute:           List[Attribute]
     TabularSection:      List[TabularSection]
     Form:                List[str]
@@ -1671,12 +1934,12 @@ class TaskChildObjects(XML):
     AddressingAttribute: List[AddressingAttribute]
     Command:             List[Command]
 
-class Task(XML):
+class Task(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[TaskProperties]
     ChildObjects: Optional[TaskChildObjects]
 
-class ParameterProperties(XML):
+class ParameterProperties(XMLData):
     Name:              Optional[str]
     Synonym:           Optional[LocalStringType]
     Comment:           Optional[str]
@@ -1684,11 +1947,11 @@ class ParameterProperties(XML):
     Nillable:          Optional[enums.Bool]
     TransferDirection: Optional[enums.TransferDirection]
 
-class Parameter(XML):
+class Parameter(XMLData):
     uuid:       Optional[str]
     Properties: Optional[ParameterProperties]
 
-class OperationProperties(XML):
+class OperationProperties(XMLData):
     Name:                   Optional[str]
     Synonym:                Optional[LocalStringType]
     Comment:                Optional[str]
@@ -1697,15 +1960,15 @@ class OperationProperties(XML):
     Transactioned:          Optional[enums.Bool]
     ProcedureName:          Optional[str]
 
-class OperationChildObjects(XML):
+class OperationChildObjects(XMLData):
     Parameter: List[Parameter]
 
-class Operation(XML):
+class Operation(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[OperationProperties]
     ChildObjects: Optional[OperationChildObjects]
 
-class WebServiceProperties(XML):
+class WebServiceProperties(XMLData):
     Name:               Optional[str]
     Synonym:            Optional[LocalStringType]
     Comment:            Optional[str]
@@ -1715,35 +1978,35 @@ class WebServiceProperties(XML):
     SessionMaxAge:      Optional[Decimal]
     #XDTOPackages  ValueList
 
-class WebServiceChildObjects(XML):
+class WebServiceChildObjects(XMLData):
     Operation: List[Operation]
 
-class WebService(XML):
+class WebService(XMLData):
     uuid:         Optional[str]
     Properties:   Optional[WebServiceProperties]
     ChildObjects: Optional[WebServiceChildObjects]
 
-class WSReferenceProperties(XML):
+class WSReferenceProperties(XMLData):
     Name:        Optional[str]
     Synonym:     Optional[LocalStringType]
     Comment:     Optional[str]
     LocationURL: Optional[str]
 
-class WSReference(XML):
+class WSReference(XMLData):
     uuid:       Optional[str]
     Properties: Optional[WSReferenceProperties]
 
-class XDTOPackageProperties(XML):
+class XDTOPackageProperties(XMLData):
     Name:      Optional[str]
     Synonym:   Optional[LocalStringType]
     Comment:   Optional[str]
     Namespace: Optional[str]
 
-class XDTOPackage(XML):
+class XDTOPackage(XMLData):
     uuid:       Optional[str]
     Properties: Optional[XDTOPackageProperties]
 
-class MetaDataObject(XML):
+class MetaDataObject(XMLData):
     version:                    Optional[Decimal]
     AccountingRegister:         Optional[AccountingRegister]
     AccumulationRegister:       Optional[AccumulationRegister]
@@ -1789,4 +2052,9 @@ class MetaDataObject(XML):
     WSReference:                Optional[WSReference]
     XDTOPackage:                Optional[XDTOPackage]
 
+class Root(XMLFile):
+    MetaDataObject: Optional[MetaDataObject]
+
 #endregion meta
+
+fill_types(globals())

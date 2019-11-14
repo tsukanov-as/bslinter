@@ -2,746 +2,370 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-from abc import abstractmethod
-
-class Plugin:
-
-    def __init__(self, src):
-        pass
-
-    @abstractmethod
-    def result(self) -> str:
-        pass
+from typing import List, Dict, Callable
+from plugins import Plugin
 
 class Visitor:
 
-    methods = [
-        'beforeVisitModule',            'afterVisitModule',
-        'beforeVisitVarModListDecl',    'afterVisitVarModListDecl',
-        'beforeVisitVarModDecl',        #'afterVisitVarModDecl',
-        'beforeVisitVarLocDecl',        #'afterVisitVarLocDecl',
-        'beforeVisitAutoDecl',          #'afterVisitAutoDecl',
-        'beforeVisitParamDecl',         'afterVisitParamDecl',
-        'beforeVisitMethodDecl',        'afterVisitMethodDecl',
-        'beforeVisitProcSign',          'afterVisitProcSign',
-        'beforeVisitFuncSign',          'afterVisitFuncSign',
-        'beforeVisitBasicLitExpr',      #'afterVisitBasicLitExpr',
-        'beforeVisitFieldExpr',         'afterVisitFieldExpr',
-        'beforeVisitIndexExpr',         'afterVisitIndexExpr',
-        'beforeVisitIdentExpr',         'afterVisitIdentExpr',
-        'beforeVisitUnaryExpr',         'afterVisitUnaryExpr',
-        'beforeVisitBinaryExpr',        'afterVisitBinaryExpr',
-        'beforeVisitNewExpr',           'afterVisitNewExpr',
-        'beforeVisitTernaryExpr',       'afterVisitTernaryExpr',
-        'beforeVisitParenExpr',         'afterVisitParenExpr',
-        'beforeVisitNotExpr',           'afterVisitNotExpr',
-        'beforeVisitStringExpr',        'afterVisitStringExpr',
-        'beforeVisitAssignStmt',        'afterVisitAssignStmt',
-        'beforeVisitReturnStmt',        'afterVisitReturnStmt',
-        'beforeVisitBreakStmt',         #'afterVisitBreakStmt',
-        'beforeVisitContinueStmt',      #'afterVisitContinueStmt',
-        'beforeVisitRaiseStmt',         'afterVisitRaiseStmt',
-        'beforeVisitExecuteStmt',       'afterVisitExecuteStmt',
-        'beforeVisitCallStmt',          'afterVisitCallStmt',
-        'beforeVisitIfStmt',            'afterVisitIfStmt',
-        'beforeVisitElsIfStmt',         'afterVisitElsIfStmt',
-        'beforeVisitElseStmt',          'afterVisitElseStmt',
-        'beforeVisitWhileStmt',         'afterVisitWhileStmt',
-        'beforeVisitForStmt',           'afterVisitForStmt',
-        'beforeVisitForEachStmt',       'afterVisitForEachStmt',
-        'beforeVisitTryStmt',           'afterVisitTryStmt',
-        'beforeVisitExceptStmt',        'afterVisitExceptStmt',
-        'beforeVisitGotoStmt',          #'afterVisitGotoStmt',
-        'beforeVisitLabelStmt',         #'afterVisitLabelStmt',
-        'beforeVisitPrepIfInst',        'afterVisitPrepIfInst',
-        'beforeVisitPrepElsIfInst',     'afterVisitPrepElsIfInst',
-        'beforeVisitPrepElseInst',      #'afterVisitPrepElseInst',
-        'beforeVisitPrepEndIfInst',     #'afterVisitPrepEndIfInst',
-        'beforeVisitPrepRegionInst',    #'afterVisitPrepRegionInst',
-        'beforeVisitPrepEndRegionInst', #'afterVisitPrepEndRegionInst',
-        'beforeVisitPrepExpr',          'afterVisitPrepExpr',
-        'beforeVisitPrepBinaryExpr',    'afterVisitPrepBinaryExpr',
-        'beforeVisitPrepNotExpr',       'afterVisitPrepNotExpr',
-        'beforeVisitPrepSymExpr',       #'afterVisitPrepSymExpr',
-        'beforeVisitPrepParenExpr',     'afterVisitPrepParenExpr',
-    ]
+    def __init__(self, plugins: List[Plugin]):
 
-    def __init__(self, plugins):
+        methods = [func for func in dir(self)
+                            if callable(getattr(self, func))
+                                and (func.startswith("visit_")
+                                     or func.startswith("leave_"))]
 
-        self.hooks = {}
+        self.hooks: Dict[str, List[Callable]] = {}
 
-        for name in self.methods:
-            hook = []
-            self.hooks[name] = hook
+        for name in methods:
+            hooks: List[Callable] = []
+            self.hooks[name] = hooks
             for plugin in plugins:
-                if hasattr(plugin, name):
-                    hook.append(plugin)
-
-    def beforeVisitModule(self, node):
-        for plugin in self.hooks['beforeVisitModule']:
-            try:
-                plugin.beforeVisitModule(node)
-            except Exception as e:
-                print(e)
+                if hook := getattr(plugin, name, None):
+                    hooks.append(hook)
 
-    def afterVisitModule(self, node):
-        for plugin in self.hooks['afterVisitModule']:
+    def perform(self, func_name, node):
+        for hook in self.hooks[func_name]:
             try:
-                plugin.afterVisitModule(node)
+                hook(node)
             except Exception as e:
                 print(e)
 
-    def beforeVisitVarModListDecl(self, node):
-        for plugin in self.hooks['beforeVisitVarModListDecl']:
-            try:
-                plugin.beforeVisitVarModListDecl(node)
-            except Exception as e:
-                print(e)
+    # Module
 
-    def afterVisitVarModListDecl(self, node):
-        for plugin in self.hooks['afterVisitVarModListDecl']:
-            try:
-                plugin.afterVisitVarModListDecl(node)
-            except Exception as e:
-                print(e)
+    def visit_Module(self, node):
+        self.perform('visit_Module', node)
 
-    def beforeVisitVarModDecl(self, node):
-        for plugin in self.hooks['beforeVisitVarModDecl']:
-            try:
-                plugin.beforeVisitVarModDecl(node)
-            except Exception as e:
-                print(e)
+    def leave_Module(self, node):
+        self.perform('leave_Module', node)
 
-    # def afterVisitVarModDecl(self, node):
-    #     for plugin in self.hooks['afterVisitVarModDecl']:
-    #         try:
-    #             plugin.afterVisitVarModDecl(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitVarLocDecl(self, node):
-        for plugin in self.hooks['beforeVisitVarLocDecl']:
-            try:
-                plugin.beforeVisitVarLocDecl(node)
-            except Exception as e:
-                print(e)
+    # VarModListDecl
 
-    # def afterVisitVarLocDecl(self, node):
-    #     for plugin in self.hooks['afterVisitVarLocDecl']:
-    #         try:
-    #             plugin.afterVisitVarLocDecl(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitAutoDecl(self, node):
-        for plugin in self.hooks['beforeVisitAutoDecl']:
-            try:
-                plugin.beforeVisitAutoDecl(node)
-            except Exception as e:
-                print(e)
+    def visit_VarModListDecl(self, node):
+        self.perform('visit_VarModListDecl', node)
 
-    # def afterVisitAutoDecl(self, node):
-    #     for plugin in self.hooks['afterVisitAutoDecl']:
-    #         try:
-    #             plugin.afterVisitAutoDecl(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitParamDecl(self, node):
-        for plugin in self.hooks['beforeVisitParamDecl']:
-            try:
-                plugin.beforeVisitParamDecl(node)
-            except Exception as e:
-                print(e)
+    def leave_VarModListDecl(self, node):
+        self.perform('leave_VarModListDecl', node)
 
-    def afterVisitParamDecl(self, node):
-        for plugin in self.hooks['afterVisitParamDecl']:
-            try:
-                plugin.afterVisitParamDecl(node)
-            except Exception as e:
-                print(e)
+    # VarModDecl
 
-    def beforeVisitMethodDecl(self, node):
-        for plugin in self.hooks['beforeVisitMethodDecl']:
-            try:
-                plugin.beforeVisitMethodDecl(node)
-            except Exception as e:
-                print(e)
+    def visit_VarModDecl(self, node):
+        self.perform('visit_VarModDecl', node)
 
-    def afterVisitMethodDecl(self, node):
-        for plugin in self.hooks['afterVisitMethodDecl']:
-            try:
-                plugin.afterVisitMethodDecl(node)
-            except Exception as e:
-                print(e)
+    # VarLocDecl
 
-    def beforeVisitProcSign(self, node):
-        for plugin in self.hooks['beforeVisitProcSign']:
-            try:
-                plugin.beforeVisitProcSign(node)
-            except Exception as e:
-                print(e)
+    def visit_VarLocDecl(self, node):
+        self.perform('visit_VarLocDecl', node)
 
-    def afterVisitProcSign(self, node):
-        for plugin in self.hooks['afterVisitProcSign']:
-            try:
-                plugin.afterVisitProcSign(node)
-            except Exception as e:
-                print(e)
+    # AutoDecl
 
-    def beforeVisitFuncSign(self, node):
-        for plugin in self.hooks['beforeVisitFuncSign']:
-            try:
-                plugin.beforeVisitFuncSign(node)
-            except Exception as e:
-                print(e)
+    def visit_AutoDecl(self, node):
+        self.perform('visit_AutoDecl', node)
 
-    def afterVisitFuncSign(self, node):
-        for plugin in self.hooks['afterVisitFuncSign']:
-            try:
-                plugin.afterVisitFuncSign(node)
-            except Exception as e:
-                print(e)
+    # ParamDecl
 
-    def beforeVisitBasicLitExpr(self, node):
-        for plugin in self.hooks['beforeVisitBasicLitExpr']:
-            try:
-                plugin.beforeVisitBasicLitExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_ParamDecl(self, node):
+        self.perform('visit_ParamDecl', node)
 
-    # def afterVisitBasicLitExpr(self, node):
-    #     for plugin in self.hooks['afterVisitBasicLitExpr']:
-    #         try:
-    #             plugin.afterVisitBasicLitExpr(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitFieldExpr(self, node):
-        for plugin in self.hooks['beforeVisitFieldExpr']:
-            try:
-                plugin.beforeVisitFieldExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_ParamDecl(self, node):
+        self.perform('leave_ParamDecl', node)
 
-    def afterVisitFieldExpr(self, node):
-        for plugin in self.hooks['afterVisitFieldExpr']:
-            try:
-                plugin.afterVisitFieldExpr(node)
-            except Exception as e:
-                print(e)
+    # MethodDecl
 
-    def beforeVisitIndexExpr(self, node):
-        for plugin in self.hooks['beforeVisitIndexExpr']:
-            try:
-                plugin.beforeVisitIndexExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_MethodDecl(self, node):
+        self.perform('visit_MethodDecl', node)
 
-    def afterVisitIndexExpr(self, node):
-        for plugin in self.hooks['afterVisitIndexExpr']:
-            try:
-                plugin.afterVisitIndexExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_MethodDecl(self, node):
+        self.perform('leave_MethodDecl', node)
 
-    def beforeVisitIdentExpr(self, node):
-        for plugin in self.hooks['beforeVisitIdentExpr']:
-            try:
-                plugin.beforeVisitIdentExpr(node)
-            except Exception as e:
-                print(e)
+    # ProcSign
 
-    def afterVisitIdentExpr(self, node):
-        for plugin in self.hooks['afterVisitIdentExpr']:
-            try:
-                plugin.afterVisitIdentExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_ProcSign(self, node):
+        self.perform('visit_ProcSign', node)
 
-    def beforeVisitUnaryExpr(self, node):
-        for plugin in self.hooks['beforeVisitUnaryExpr']:
-            try:
-                plugin.beforeVisitUnaryExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_ProcSign(self, node):
+        self.perform('leave_ProcSign', node)
 
-    def afterVisitUnaryExpr(self, node):
-        for plugin in self.hooks['afterVisitUnaryExpr']:
-            try:
-                plugin.afterVisitUnaryExpr(node)
-            except Exception as e:
-                print(e)
+    # FuncSign
 
-    def beforeVisitBinaryExpr(self, node):
-        for plugin in self.hooks['beforeVisitBinaryExpr']:
-            try:
-                plugin.beforeVisitBinaryExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_FuncSign(self, node):
+        self.perform('visit_FuncSign', node)
 
-    def afterVisitBinaryExpr(self, node):
-        for plugin in self.hooks['afterVisitBinaryExpr']:
-            try:
-                plugin.afterVisitBinaryExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_FuncSign(self, node):
+        self.perform('leave_FuncSign', node)
 
-    def beforeVisitNewExpr(self, node):
-        for plugin in self.hooks['beforeVisitNewExpr']:
-            try:
-                plugin.beforeVisitNewExpr(node)
-            except Exception as e:
-                print(e)
+    # TODO: visit_Expr(), которая вызывается один раз на выражение
 
-    def afterVisitNewExpr(self, node):
-        for plugin in self.hooks['afterVisitNewExpr']:
-            try:
-                plugin.afterVisitNewExpr(node)
-            except Exception as e:
-                print(e)
+    # BasicLitExpr
 
-    def beforeVisitTernaryExpr(self, node):
-        for plugin in self.hooks['beforeVisitTernaryExpr']:
-            try:
-                plugin.beforeVisitTernaryExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_BasicLitExpr(self, node):
+        self.perform('visit_BasicLitExpr', node)
 
-    def afterVisitTernaryExpr(self, node):
-        for plugin in self.hooks['afterVisitTernaryExpr']:
-            try:
-                plugin.afterVisitTernaryExpr(node)
-            except Exception as e:
-                print(e)
+    # FieldExpr
 
-    def beforeVisitParenExpr(self, node):
-        for plugin in self.hooks['beforeVisitParenExpr']:
-            try:
-                plugin.beforeVisitParenExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_FieldExpr(self, node):
+        self.perform('visit_FieldExpr', node)
 
-    def afterVisitParenExpr(self, node):
-        for plugin in self.hooks['afterVisitParenExpr']:
-            try:
-                plugin.afterVisitParenExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_FieldExpr(self, node):
+        self.perform('leave_FieldExpr', node)
 
-    def beforeVisitNotExpr(self, node):
-        for plugin in self.hooks['beforeVisitNotExpr']:
-            try:
-                plugin.beforeVisitNotExpr(node)
-            except Exception as e:
-                print(e)
+    # IndexExpr
 
-    def afterVisitNotExpr(self, node):
-        for plugin in self.hooks['afterVisitNotExpr']:
-            try:
-                plugin.afterVisitNotExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_IndexExpr(self, node):
+        self.perform('visit_IndexExpr', node)
 
-    def beforeVisitStringExpr(self, node):
-        for plugin in self.hooks['beforeVisitStringExpr']:
-            try:
-                plugin.beforeVisitStringExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_IndexExpr(self, node):
+        self.perform('leave_IndexExpr', node)
 
-    def afterVisitStringExpr(self, node):
-        for plugin in self.hooks['afterVisitStringExpr']:
-            try:
-                plugin.afterVisitStringExpr(node)
-            except Exception as e:
-                print(e)
+    # IdentExpr
 
-    def beforeVisitAssignStmt(self, node):
-        for plugin in self.hooks['beforeVisitAssignStmt']:
-            try:
-                plugin.beforeVisitAssignStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_IdentExpr(self, node):
+        self.perform('visit_IdentExpr', node)
 
-    def afterVisitAssignStmt(self, node):
-        for plugin in self.hooks['afterVisitAssignStmt']:
-            try:
-                plugin.afterVisitAssignStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_IdentExpr(self, node):
+        self.perform('leave_IdentExpr', node)
 
-    def beforeVisitReturnStmt(self, node):
-        for plugin in self.hooks['beforeVisitReturnStmt']:
-            try:
-                plugin.beforeVisitReturnStmt(node)
-            except Exception as e:
-                print(e)
+    # UnaryExpr
 
-    def afterVisitReturnStmt(self, node):
-        for plugin in self.hooks['afterVisitReturnStmt']:
-            try:
-                plugin.afterVisitReturnStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_UnaryExpr(self, node):
+        self.perform('visit_UnaryExpr', node)
 
-    def beforeVisitBreakStmt(self, node):
-        for plugin in self.hooks['beforeVisitBreakStmt']:
-            try:
-                plugin.beforeVisitBreakStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_UnaryExpr(self, node):
+        self.perform('leave_UnaryExpr', node)
 
-    # def afterVisitBreakStmt(self, node):
-    #     for plugin in self.hooks['afterVisitBreakStmt']:
-    #         try:
-    #             plugin.afterVisitBreakStmt(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitContinueStmt(self, node):
-        for plugin in self.hooks['beforeVisitContinueStmt']:
-            try:
-                plugin.beforeVisitContinueStmt(node)
-            except Exception as e:
-                print(e)
+    # BinaryExpr
 
-    # def afterVisitContinueStmt(self, node):
-    #     for plugin in self.hooks['afterVisitContinueStmt']:
-    #         try:
-    #             plugin.afterVisitContinueStmt(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitRaiseStmt(self, node):
-        for plugin in self.hooks['beforeVisitRaiseStmt']:
-            try:
-                plugin.beforeVisitRaiseStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_BinaryExpr(self, node):
+        self.perform('visit_BinaryExpr', node)
 
-    def afterVisitRaiseStmt(self, node):
-        for plugin in self.hooks['afterVisitRaiseStmt']:
-            try:
-                plugin.afterVisitRaiseStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_BinaryExpr(self, node):
+        self.perform('leave_BinaryExpr', node)
 
-    def beforeVisitExecuteStmt(self, node):
-        for plugin in self.hooks['beforeVisitExecuteStmt']:
-            try:
-                plugin.beforeVisitExecuteStmt(node)
-            except Exception as e:
-                print(e)
+    # NewExpr
 
-    def afterVisitExecuteStmt(self, node):
-        for plugin in self.hooks['afterVisitExecuteStmt']:
-            try:
-                plugin.afterVisitExecuteStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_NewExpr(self, node):
+        self.perform('visit_NewExpr', node)
 
-    def beforeVisitCallStmt(self, node):
-        for plugin in self.hooks['beforeVisitCallStmt']:
-            try:
-                plugin.beforeVisitCallStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_NewExpr(self, node):
+        self.perform('leave_NewExpr', node)
 
-    def afterVisitCallStmt(self, node):
-        for plugin in self.hooks['afterVisitCallStmt']:
-            try:
-                plugin.afterVisitCallStmt(node)
-            except Exception as e:
-                print(e)
+    # TernaryExpr
 
-    def beforeVisitIfStmt(self, node):
-        for plugin in self.hooks['beforeVisitIfStmt']:
-            try:
-                plugin.beforeVisitIfStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_TernaryExpr(self, node):
+        self.perform('visit_TernaryExpr', node)
 
-    def afterVisitIfStmt(self, node):
-        for plugin in self.hooks['afterVisitIfStmt']:
-            try:
-                plugin.afterVisitIfStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_TernaryExpr(self, node):
+        self.perform('leave_TernaryExpr', node)
 
-    def beforeVisitElsIfStmt(self, node):
-        for plugin in self.hooks['beforeVisitElsIfStmt']:
-            try:
-                plugin.beforeVisitElsIfStmt(node)
-            except Exception as e:
-                print(e)
+    # ParenExpr
 
-    def afterVisitElsIfStmt(self, node):
-        for plugin in self.hooks['afterVisitElsIfStmt']:
-            try:
-                plugin.afterVisitElsIfStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_ParenExpr(self, node):
+        self.perform('visit_ParenExpr', node)
 
-    def beforeVisitElseStmt(self, node):
-        for plugin in self.hooks['beforeVisitElseStmt']:
-            try:
-                plugin.beforeVisitElseStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_ParenExpr(self, node):
+        self.perform('leave_ParenExpr', node)
 
-    def afterVisitElseStmt(self, node):
-        for plugin in self.hooks['afterVisitElseStmt']:
-            try:
-                plugin.afterVisitElseStmt(node)
-            except Exception as e:
-                print(e)
+    # NotExpr
 
-    def beforeVisitWhileStmt(self, node):
-        for plugin in self.hooks['beforeVisitWhileStmt']:
-            try:
-                plugin.beforeVisitWhileStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_NotExpr(self, node):
+        self.perform('visit_NotExpr', node)
 
-    def afterVisitWhileStmt(self, node):
-        for plugin in self.hooks['afterVisitWhileStmt']:
-            try:
-                plugin.afterVisitWhileStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_NotExpr(self, node):
+        self.perform('leave_NotExpr', node)
 
-    def beforeVisitForStmt(self, node):
-        for plugin in self.hooks['beforeVisitForStmt']:
-            try:
-                plugin.beforeVisitForStmt(node)
-            except Exception as e:
-                print(e)
+    # StringExpr
 
-    def afterVisitForStmt(self, node):
-        for plugin in self.hooks['afterVisitForStmt']:
-            try:
-                plugin.afterVisitForStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_StringExpr(self, node):
+        self.perform('visit_StringExpr', node)
 
-    def beforeVisitForEachStmt(self, node):
-        for plugin in self.hooks['beforeVisitForEachStmt']:
-            try:
-                plugin.beforeVisitForEachStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_StringExpr(self, node):
+        self.perform('leave_StringExpr', node)
 
-    def afterVisitForEachStmt(self, node):
-        for plugin in self.hooks['afterVisitForEachStmt']:
-            try:
-                plugin.afterVisitForEachStmt(node)
-            except Exception as e:
-                print(e)
+    # AssignStmt
 
-    def beforeVisitTryStmt(self, node):
-        for plugin in self.hooks['beforeVisitTryStmt']:
-            try:
-                plugin.beforeVisitTryStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_AssignStmt(self, node):
+        self.perform('visit_AssignStmt', node)
 
-    def afterVisitTryStmt(self, node):
-        for plugin in self.hooks['afterVisitTryStmt']:
-            try:
-                plugin.afterVisitTryStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_AssignStmt(self, node):
+        self.perform('leave_AssignStmt', node)
 
-    def beforeVisitExceptStmt(self, node):
-        for plugin in self.hooks['beforeVisitExceptStmt']:
-            try:
-                plugin.beforeVisitExceptStmt(node)
-            except Exception as e:
-                print(e)
+    # ReturnStmt
 
-    def afterVisitExceptStmt(self, node):
-        for plugin in self.hooks['afterVisitExceptStmt']:
-            try:
-                plugin.afterVisitExceptStmt(node)
-            except Exception as e:
-                print(e)
+    def visit_ReturnStmt(self, node):
+        self.perform('visit_ReturnStmt', node)
 
-    def beforeVisitGotoStmt(self, node):
-        for plugin in self.hooks['beforeVisitGotoStmt']:
-            try:
-                plugin.beforeVisitGotoStmt(node)
-            except Exception as e:
-                print(e)
+    def leave_ReturnStmt(self, node):
+        self.perform('leave_ReturnStmt', node)
 
-    # def afterVisitGotoStmt(self, node):
-    #     for plugin in self.hooks['afterVisitGotoStmt']:
-    #         try:
-    #             plugin.afterVisitGotoStmt(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitLabelStmt(self, node):
-        for plugin in self.hooks['beforeVisitLabelStmt']:
-            try:
-                plugin.beforeVisitLabelStmt(node)
-            except Exception as e:
-                print(e)
+    # BreakStmt
 
-    # def afterVisitLabelStmt(self, node):
-    #     for plugin in self.hooks['afterVisitLabelStmt']:
-    #         try:
-    #             plugin.afterVisitLabelStmt(node)
-    #         except Exception as e:
-    #             print(e)
-
-    def beforeVisitPrepIfInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepIfInst']:
-            try:
-                plugin.beforeVisitPrepIfInst(node)
-            except Exception as e:
-                print(e)
+    def visit_BreakStmt(self, node):
+        self.perform('visit_BreakStmt', node)
 
-    def afterVisitPrepIfInst(self, node):
-        for plugin in self.hooks['afterVisitPrepIfInst']:
-            try:
-                plugin.afterVisitPrepIfInst(node)
-            except Exception as e:
-                print(e)
+    # ContinueStmt
+
+    def visit_ContinueStmt(self, node):
+        self.perform('visit_ContinueStmt', node)
+
+    # RaiseStmt
+
+    def visit_RaiseStmt(self, node):
+        self.perform('visit_RaiseStmt', node)
+
+    def leave_RaiseStmt(self, node):
+        self.perform('leave_RaiseStmt', node)
+
+    # ExecuteStmt
+
+    def visit_ExecuteStmt(self, node):
+        self.perform('visit_ExecuteStmt', node)
+
+    def leave_ExecuteStmt(self, node):
+        self.perform('leave_ExecuteStmt', node)
+
+    # CallStmt
+
+    def visit_CallStmt(self, node):
+        self.perform('visit_CallStmt', node)
+
+    def leave_CallStmt(self, node):
+        self.perform('leave_CallStmt', node)
+
+    # IfStmt
+
+    def visit_IfStmt(self, node):
+        self.perform('visit_IfStmt', node)
+
+    def leave_IfStmt(self, node):
+        self.perform('leave_IfStmt', node)
+
+    # ElsIfStmt
+
+    def visit_ElsIfStmt(self, node):
+        self.perform('visit_ElsIfStmt', node)
+
+    def leave_ElsIfStmt(self, node):
+        self.perform('leave_ElsIfStmt', node)
+
+    # ElseStmt
+
+    def visit_ElseStmt(self, node):
+        self.perform('visit_ElseStmt', node)
+
+    def leave_ElseStmt(self, node):
+        self.perform('leave_ElseStmt', node)
+
+    # WhileStmt
+
+    def visit_WhileStmt(self, node):
+        self.perform('visit_WhileStmt', node)
+
+    def leave_WhileStmt(self, node):
+        self.perform('leave_WhileStmt', node)
+
+    # ForStmt
+
+    def visit_ForStmt(self, node):
+        self.perform('visit_ForStmt', node)
+
+    def leave_ForStmt(self, node):
+        self.perform('leave_ForStmt', node)
+
+    # ForEachStmt
+
+    def visit_ForEachStmt(self, node):
+        self.perform('visit_ForEachStmt', node)
+
+    def leave_ForEachStmt(self, node):
+        self.perform('leave_ForEachStmt', node)
+
+    # TryStmt
+
+    def visit_TryStmt(self, node):
+        self.perform('visit_TryStmt', node)
+
+    def leave_TryStmt(self, node):
+        self.perform('leave_TryStmt', node)
+
+    # ExceptStmt
+
+    def visit_ExceptStmt(self, node):
+        self.perform('visit_ExceptStmt', node)
+
+    def leave_ExceptStmt(self, node):
+        self.perform('leave_ExceptStmt', node)
+
+    # GotoStmt
+
+    def visit_GotoStmt(self, node):
+        self.perform('visit_GotoStmt', node)
+
+    # LabelStmt
+
+    def visit_LabelStmt(self, node):
+        self.perform('visit_LabelStmt', node)
+
+    # PrepIfInst
+
+    def visit_PrepIfInst(self, node):
+        self.perform('visit_PrepIfInst', node)
+
+    def leave_PrepIfInst(self, node):
+        self.perform('leave_PrepIfInst', node)
 
     # PrepElsIfInst
 
-    def beforeVisitPrepElsIfInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepElsIfInst']:
-            try:
-                plugin.beforeVisitPrepElsIfInst(node)
-            except Exception as e:
-                print(e)
+    def visit_PrepElsIfInst(self, node):
+        self.perform('visit_PrepElsIfInst', node)
 
-    def afterVisitPrepElsIfInst(self, node):
-        for plugin in self.hooks['afterVisitPrepElsIfInst']:
-            try:
-                plugin.afterVisitPrepElsIfInst(node)
-            except Exception as e:
-                print(e)
+    def leave_PrepElsIfInst(self, node):
+        self.perform('leave_PrepElsIfInst', node)
 
     # PrepElseInst
 
-    def beforeVisitPrepElseInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepElseInst']:
-            try:
-                plugin.beforeVisitPrepElseInst(node)
-            except Exception as e:
-                print(e)
-
-    # def afterVisitPrepElseInst(self, node):
-    #     for plugin in self.hooks['afterVisitPrepElseInst']:
-    #         try:
-    #             plugin.afterVisitPrepElseInst(node)
-    #         except Exception as e:
-    #             print(e)
+    def visit_PrepElseInst(self, node):
+        self.perform('visit_PrepElseInst', node)
 
     # PrepEndIfInst
 
-    def beforeVisitPrepEndIfInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepEndIfInst']:
-            try:
-                plugin.beforeVisitPrepEndIfInst(node)
-            except Exception as e:
-                print(e)
-
-    # def afterVisitPrepEndIfInst(self, node):
-    #     for plugin in self.hooks['afterVisitPrepEndIfInst']:
-    #         try:
-    #             plugin.afterVisitPrepEndIfInst(node)
-    #         except Exception as e:
-    #             print(e)
+    def visit_PrepEndIfInst(self, node):
+        self.perform('visit_PrepEndIfInst', node)
 
     # PrepRegionInst
 
-    def beforeVisitPrepRegionInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepRegionInst']:
-            try:
-                plugin.beforeVisitPrepRegionInst(node)
-            except Exception as e:
-                print(e)
-
-    # def afterVisitPrepRegionInst(self, node):
-    #     for plugin in self.hooks['afterVisitPrepRegionInst']:
-    #         try:
-    #             plugin.afterVisitPrepRegionInst(node)
-    #         except Exception as e:
-    #             print(e)
+    def visit_PrepRegionInst(self, node):
+        self.perform('visit_PrepRegionInst', node)
 
     # PrepEndRegionInst
 
-    def beforeVisitPrepEndRegionInst(self, node):
-        for plugin in self.hooks['beforeVisitPrepEndRegionInst']:
-            try:
-                plugin.beforeVisitPrepEndRegionInst(node)
-            except Exception as e:
-                print(e)
+    def visit_PrepEndRegionInst(self, node):
+        self.perform('visit_PrepEndRegionInst', node)
 
-    # def afterVisitPrepEndRegionInst(self, node):
-    #     for plugin in self.hooks['afterVisitPrepEndRegionInst']:
-    #         try:
-    #             plugin.afterVisitPrepEndRegionInst(node)
-    #         except Exception as e:
-    #             print(e)
+    # PrepBinaryExpr
 
-    def beforeVisitPrepBinaryExpr(self, node):
-        for plugin in self.hooks['beforeVisitPrepBinaryExpr']:
-            try:
-                plugin.beforeVisitPrepBinaryExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_PrepBinaryExpr(self, node):
+        self.perform('visit_PrepBinaryExpr', node)
 
-    def afterVisitPrepBinaryExpr(self, node):
-        for plugin in self.hooks['afterVisitPrepBinaryExpr']:
-            try:
-                plugin.afterVisitPrepBinaryExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_PrepBinaryExpr(self, node):
+        self.perform('leave_PrepBinaryExpr', node)
 
-    def beforeVisitPrepNotExpr(self, node):
-        for plugin in self.hooks['beforeVisitPrepNotExpr']:
-            try:
-                plugin.beforeVisitPrepNotExpr(node)
-            except Exception as e:
-                print(e)
+    # PrepNotExpr
 
-    def afterVisitPrepNotExpr(self, node):
-        for plugin in self.hooks['afterVisitPrepNotExpr']:
-            try:
-                plugin.afterVisitPrepNotExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_PrepNotExpr(self, node):
+        self.perform('visit_PrepNotExpr', node)
 
-    def beforeVisitPrepSymExpr(self, node):
-        for plugin in self.hooks['beforeVisitPrepSymExpr']:
-            try:
-                plugin.beforeVisitPrepSymExpr(node)
-            except Exception as e:
-                print(e)
+    def leave_PrepNotExpr(self, node):
+        self.perform('leave_PrepNotExpr', node)
 
-    # def afterVisitPrepSymExpr(self, node):
-    #     for plugin in self.hooks['afterVisitPrepSymExpr']:
-    #         try:
-    #             plugin.afterVisitPrepSymExpr(node)
-    #         except Exception as e:
-    #             print(e)
+    # PrepSymExpr
 
-    def beforeVisitPrepParenExpr(self, node):
-        for plugin in self.hooks['beforeVisitPrepParenExpr']:
-            try:
-                plugin.beforeVisitPrepParenExpr(node)
-            except Exception as e:
-                print(e)
+    def visit_PrepSymExpr(self, node):
+        self.perform('visit_PrepSymExpr', node)
 
-    def afterVisitPrepParenExpr(self, node):
-        for plugin in self.hooks['afterVisitPrepParenExpr']:
-            try:
-                plugin.afterVisitPrepParenExpr(node)
-            except Exception as e:
-                print(e)
+    # PrepParenExpr
+
+    def visit_PrepParenExpr(self, node):
+        self.perform('visit_PrepParenExpr', node)
+
+    def leave_PrepParenExpr(self, node):
+        self.perform('leave_PrepParenExpr', node)
 

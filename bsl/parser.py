@@ -3,10 +3,11 @@
 # license that can be found in the LICENSE file.
 
 from decimal import Decimal
-from typing import List, Union, Dict, Optional, TypeVar, Tuple
+from typing import List, Union, Dict, Optional, Tuple
 from collections import namedtuple
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
 import bsl.ast as ast
+from bsl.glob import scope as global_scope
 
 tokens_map: Dict[str, Tokens] = {
     '=': Tokens.EQL,
@@ -73,10 +74,12 @@ init_of_expr = {
     Keywords.NULL,
 }
 
+Marker = namedtuple('Marker', 'pos line column')
+
 class ParserException(Exception):
-    def __init__(self, text: str, pos: int):
+    def __init__(self, text: str, marker: Marker):
         self.text = text
-        self.pos = pos
+        (self.pos, self.line, self.column) = marker
 
 class UnexpectedSyntax(ParserException):
     pass
@@ -95,10 +98,9 @@ class AlreadyDeclared(ParserException):
 
 Error = namedtuple('Error', 'text pos line')
 
-TypeParser = TypeVar('TypeParser', bound='Parser')
 class Parser:
 
-    def __init__(self: TypeParser, src: str):
+    def __init__(self, src: str, scope: ast.Scope = None):
 
         self.src: str = src
 
@@ -108,13 +110,17 @@ class Parser:
 
         self.cur_line: int = 1
         self.end_line: int = 1
+        self.line_pos: int = 0
+
+        self.beg_column: int = 0
+        self.end_column: int = 0
 
         self.char: str = ""
         self.lit: str = ""
         self.tok: Tokens
         self.val: Union[Decimal, str, bool, None]
 
-        self.scope: ast.Scope = ast.Scope()  # TODO: context
+        self.scope: ast.Scope = scope or global_scope
         self.vars: Dict[str, ast.Item] = {}
         self.methods: Dict[str, ast.Item] = {}
         self.unknown: Dict[str, ast.Item] = {}
@@ -126,26 +132,28 @@ class Parser:
         self.directive: Optional[Directives] = None
         self.interface: List[ast.Item] = []
 
-        self.comments: Dict[int, str] = {}
+        self.comments: Dict[int, ast.Comment] = {}
 
         self.errors: List[Error] = []
 
         self.scan()
 
-    def next(self: TypeParser) -> str:
+    def next(self) -> str:
         self.cur_pos += 1
         self.char = self.src[self.cur_pos:self.cur_pos+1]
         return self.char
 
-    def scan(self: TypeParser) -> Tokens:
+    def scan(self) -> Tokens:
 
         self.end_pos = self.cur_pos
         self.end_line = self.cur_line
+        self.end_column = self.cur_pos - self.line_pos
 
         self.val = None
 
         if self.lit[-1:] == '\n':
             self.cur_line += 1
+            self.line_pos = self.cur_pos
 
         while 1:
 
@@ -155,9 +163,11 @@ class Parser:
             while self.char.isspace():
                 if self.char == '\n':
                     self.cur_line += 1
+                    self.line_pos = self.cur_pos + 1
                 self.next()
 
             self.beg_pos = self.cur_pos
+            self.beg_column = self.cur_pos - self.line_pos
 
             if self.char.isalpha() or self.char == '_':
 
@@ -256,7 +266,7 @@ class Parser:
                     if pos >= 0:
                         self.cur_pos = pos
                         self.char = '\n'
-                        self.comments[self.cur_line] = self.src[beg:self.cur_pos]
+                        self.comments[self.cur_line] = ast.Comment(self.src[beg:self.cur_pos], beg, self.cur_line, beg - self.line_pos)
                     else:
                         self.cur_pos = len(self.src)
                         self.char = ''
@@ -294,7 +304,7 @@ class Parser:
                 self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Directive expected', self.cur_pos)
+                    raise UnexpectedChar('Directive expected', self.mark_at(self.cur_pos))
 
                 # scan ident
                 beg = self.cur_pos
@@ -306,7 +316,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.cur_pos) # TODO: check pos
+                    raise UnknownToken(f'Unknown directive: "{self.lit}"', self.mark_at(self.cur_pos - len(self.lit)))
 
             elif self.char == '#':
 
@@ -316,10 +326,11 @@ class Parser:
                 while self.char.isspace():
                     if self.char == '\n':
                         self.cur_line += 1
+                        self.line_pos = self.cur_pos + 1
                     self.next()
 
                 if not self.char.isalpha():
-                    raise UnexpectedChar('Preprocessor instruction expected', self.cur_pos)
+                    raise UnexpectedChar('Preprocessor instruction expected', self.mark_at(self.cur_pos))
 
                 # scan ident
                 beg = self.cur_pos
@@ -331,7 +342,7 @@ class Parser:
                 if tok is not None:
                     self.tok = tok
                 else:
-                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', self.cur_pos)
+                    raise UnknownToken(f'Unknown preprocessor instruction: "{self.lit}"', self.mark_at(self.cur_pos))
 
             elif self.char == '~':
 
@@ -339,6 +350,7 @@ class Parser:
                 while self.char.isspace():
                     if self.char == '\n':
                         self.cur_line += 1
+                        self.line_pos = self.cur_pos + 1
                     self.next()
 
                 if self.char.isalnum() or self.char == '_':
@@ -360,56 +372,64 @@ class Parser:
                     self.tok = tok
                     self.next()
                 else:
-                    raise UnexpectedChar('Unknown char', self.cur_pos)
+                    raise UnexpectedChar('Unknown char', self.mark_at(self.cur_pos))
 
             if not comment:
                 break
 
         return self.tok
 
-    def place(self: TypeParser) -> ast.Place:
-        return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line)
+    def place(self) -> ast.Place:
+        return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line, self.beg_column, self.end_column)
 
-    def marker(self: TypeParser):
-        return (self.beg_pos, self.cur_line)
+    def mark_at(self, pos):
+        return Marker(pos, self.cur_line, pos - self.line_pos)
 
-    def place_from(self: TypeParser, marker) -> ast.Place:
-        return ast.Place(marker[0], self.end_pos, marker[1], self.end_line)
+    def marker(self):
+        return Marker(self.beg_pos, self.cur_line, self.beg_column)
+
+    def place_from(self, marker) -> ast.Place:
+        return ast.Place(marker.pos, self.end_pos, marker.line, self.end_line, marker.column, self.end_column)
 
     def expect(self, tok: Union[Tokens, Keywords]):
         if self.tok != tok:
-            raise UnexpectedToken(f'{tok} expected', self.beg_pos)
+            raise UnexpectedToken(f'{tok} expected', self.mark_at(self.beg_pos))
 
-    def error(self: TypeParser, text, pos, line):
-        self.errors.append(Error(text, pos, line))
-        # if stop:
-        #     raise Exception(text)
-        # else:
-        #     print(text, pos)
+    def error(self, text, marker: Marker):
+        self.errors.append(Error(text, marker.pos, marker.line))
 
-    def find_item(self: TypeParser, name) -> Optional[ast.Item]:
-        item = self.scope.Items.get(name)
+    def find_var(self, name) -> Optional[ast.Item]:
+        item = self.scope.Vars.get(name)
         scope = self.scope.Outer
         while item is None and scope is not None:
-            item = scope.Items.get(name)
+            item = scope.Vars.get(name)
             scope = scope.Outer
         return item
 
-    def open_scope(self: TypeParser) -> ast.Scope:
+    def find_method(self, name) -> Optional[ast.Item]:
+        item = self.scope.Methods.get(name)
+        scope = self.scope.Outer
+        while item is None and scope is not None:
+            item = scope.Methods.get(name)
+            scope = scope.Outer
+        return item
+
+    def open_scope(self) -> ast.Scope:
         scope = ast.Scope(self.scope)
         self.scope = scope
-        self.vars = scope.Items
+        self.vars = scope.Vars
         return scope
 
-    def close_scope(self: TypeParser) -> ast.Scope:
+    def close_scope(self) -> ast.Scope:
         scope = self.scope.Outer
         assert scope is not None
         self.scope = scope
-        self.vars = scope.Items
+        self.vars = scope.Vars
         return scope
 
-    def parse(self: TypeParser) -> ast.Module:
+    def parse(self) -> ast.Module:
         self.open_scope()
+        self.methods = self.scope.Methods
         self.scan()
         decls = self.parseModDecls()
         statements = self.parseStatements()
@@ -422,17 +442,17 @@ class Parser:
             self.comments.copy()
         )
         for name in self.unknown:
-            places = self.callsites[self.unknown[name]]
+            item = self.unknown[name]
+            places = self.callsites[item]
             for place in places:
                 self.error(
-                    f'Undeclared method "{name}"',
-                    place.BegPos,
-                    place.BegLine
+                    f'Undeclared method "{item.Name}"',
+                    Marker(place.BegPos, place.BegLine, place.BegColumn)
                 )
         self.expect(Tokens.EOF)
         return module
 
-    def parseExpression(self: TypeParser) -> ast.Expr:
+    def parseExpression(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseAndExpr()
         while self.tok == Keywords.OR:
@@ -446,7 +466,7 @@ class Parser:
             )
         return expr
 
-    def parseAndExpr(self: TypeParser) -> ast.Expr:
+    def parseAndExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseNotExpr()
         while self.tok == Keywords.AND:
@@ -460,7 +480,7 @@ class Parser:
             )
         return expr
 
-    def parseNotExpr(self: TypeParser) -> ast.Expr:
+    def parseNotExpr(self) -> ast.Expr:
         marker = self.marker()
         expr: ast.Expr
         if self.tok == Keywords.NOT:
@@ -473,7 +493,7 @@ class Parser:
             expr = self.parseRelExpr()
         return expr
 
-    def parseRelExpr(self: TypeParser) -> ast.Expr:
+    def parseRelExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseAddExpr()
         while self.tok in rel_operators:
@@ -487,7 +507,7 @@ class Parser:
             )
         return expr
 
-    def parseAddExpr(self: TypeParser) -> ast.Expr:
+    def parseAddExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseMulExpr()
         while self.tok in add_operators:
@@ -501,7 +521,7 @@ class Parser:
             )
         return expr
 
-    def parseMulExpr(self: TypeParser) -> ast.Expr:
+    def parseMulExpr(self) -> ast.Expr:
         marker = self.marker()
         expr = self.parseUnaryExpr()
         while self.tok in mul_operators:
@@ -515,7 +535,7 @@ class Parser:
             )
         return expr
 
-    def parseUnaryExpr(self: TypeParser) -> ast.Expr:
+    def parseUnaryExpr(self) -> ast.Expr:
         marker = self.marker()
         operator = self.tok
         expr: ast.Expr
@@ -531,7 +551,7 @@ class Parser:
             expr = self.parseOperand()
         return expr
 
-    def parseOperand(self: TypeParser) -> ast.Expr:
+    def parseOperand(self) -> ast.Expr:
         tok = self.tok
         operand: ast.Expr
         if tok in [Tokens.STRING, Tokens.STRINGBEG]:
@@ -552,10 +572,10 @@ class Parser:
         elif tok == Keywords.NEW:
             operand = self.parseNewExpr()
         else:
-            raise UnexpectedToken('Operand expected', self.cur_pos) # TODO: check pos
+            raise UnexpectedToken('Operand expected', self.mark_at(self.cur_pos - len(self.lit)))
         return operand
 
-    def parseStringExpr(self: TypeParser) -> ast.StringExpr:
+    def parseStringExpr(self) -> ast.StringExpr:
         marker = self.marker()
         expr_list = []
         def append_this():
@@ -574,7 +594,7 @@ class Parser:
                 append_this()
                 while self.scan() == Tokens.STRINGMID:
                     append_this()
-                self.expect(Tokens.STRINGEND) # TODO: check pos
+                self.expect(Tokens.STRINGEND)
                 append_this()
                 self.scan()
             else:
@@ -585,10 +605,10 @@ class Parser:
         )
         return expr
 
-    def parseNewExpr(self: TypeParser) -> ast.NewExpr:
+    def parseNewExpr(self) -> ast.NewExpr:
         marker = self.marker()
         name: Optional[str] = None
-        args: ast.Args
+        args: Optional[ast.Args] = None
         if self.scan() == Tokens.IDENT:
             name = self.lit
             args = []
@@ -599,7 +619,7 @@ class Parser:
                 self.expect(Tokens.RPAREN)
             self.scan()
         if name is None and args is None:
-            raise UnexpectedSyntax('Constructor expected', self.end_pos)
+            raise UnexpectedSyntax('Constructor expected', self.mark_at(self.end_pos))
         expr = ast.NewExpr(
             name,
             args,
@@ -607,7 +627,7 @@ class Parser:
         )
         return expr
 
-    def parseIdentExpr(self: TypeParser, allow_new_var: bool = False) -> Tuple[ast.IdentExpr, Optional[ast.Item], bool]:
+    def parseIdentExpr(self, allow_new_var: bool = False) -> Tuple[ast.IdentExpr, Optional[ast.Item], bool]:
         marker = self.marker()
         name = self.lit
         auto_place = self.place()
@@ -622,15 +642,15 @@ class Parser:
                 args = self.parseArguments()
             self.expect(Tokens.RPAREN)
             self.scan()
-            item = self.methods.get(name)
+            item = self.find_method(name.lower())
             if item is None:
-                item = self.unknown.get(name)
+                item = self.unknown.get(name.lower())
                 if item is not None:
                     places = self.callsites[item]
                     places.append(auto_place)
                 else:
                     item = ast.Item(name)
-                    self.unknown[name] = item
+                    self.unknown[name.lower()] = item
                     self.callsites[item] = [auto_place]
             call = True
             tail, call = self.parseTail(call)
@@ -639,14 +659,14 @@ class Parser:
             tail, call = self.parseTail(call)
             if len(tail) > 0:
                 allow_new_var = False
-            item = self.find_item(name.lower())
+            item = self.find_var(name.lower())
             if item is None:
                 if allow_new_var:
                     item = ast.Item(name, ast.AutoDecl(name, auto_place))
                     new_var = item
                 else:
                     item = ast.Item(name)
-                    self.error(f'Undeclared identifier "{name}"', marker[0], marker[1])
+                    self.error(f'Undeclared identifier "{name}"', marker)
         expr = ast.IdentExpr(
             item,
             tail,
@@ -655,11 +675,11 @@ class Parser:
         )
         return expr, new_var, call
 
-    def parseTail(self: TypeParser, call: bool = False) -> Tuple[List[ast.TailItemExpr], bool]:
+    def parseTail(self, call: bool = False) -> Tuple[List[ast.TailItemExpr], bool]:
         marker = self.marker()
         expr: ast.TailItemExpr
         tail: List[ast.TailItemExpr] = []
-        args: ast.Args
+        args: Optional[ast.Args] = None
         while True:
             if self.tok == Tokens.PERIOD:
                 self.scan()
@@ -686,7 +706,7 @@ class Parser:
             elif self.tok == Tokens.LBRACK:
                 call = False
                 if self.scan() == Tokens.RBRACK:
-                    raise UnexpectedSyntax('Expression expected', marker[0])
+                    raise UnexpectedSyntax('Expression expected', marker)
                 index = self.parseExpression()
                 self.expect(Tokens.RBRACK)
                 self.scan()
@@ -699,8 +719,8 @@ class Parser:
                 break
         return tail, call
 
-    def parseArguments(self: TypeParser) -> ast.Args:
-        expr_list: List[Optional[ast.Expr]] = []
+    def parseArguments(self) -> ast.Args:
+        expr_list: ast.Args = []
         while True:
             if self.tok in init_of_expr:
                 expr_list.append(self.parseExpression())
@@ -712,7 +732,7 @@ class Parser:
                 break
         return expr_list
 
-    def parseTernaryExpr(self: TypeParser) -> ast.Expr:
+    def parseTernaryExpr(self) -> ast.Expr:
         marker = self.marker()
         self.scan()
         self.expect(Tokens.LPAREN)
@@ -739,7 +759,7 @@ class Parser:
         )
         return expr
 
-    def parseParenExpr(self: TypeParser) -> ast.Expr:
+    def parseParenExpr(self) -> ast.Expr:
         marker = self.marker()
         self.scan()
         expr = self.parseExpression()
@@ -830,7 +850,7 @@ class Parser:
             self.place_from(marker)
         )
         if self.vars.get(name_lower) is not None:
-            raise AlreadyDeclared('Identifier already declared', marker[0])
+            raise AlreadyDeclared('Identifier already declared', marker)
         item = ast.Item(name, decl)
         self.vars[name_lower] = item
         if export:
@@ -859,7 +879,7 @@ class Parser:
             self.place()
         )
         if self.vars.get(name_lower) is not None:
-            raise AlreadyDeclared("Identifier already declared", marker[0])
+            raise AlreadyDeclared("Identifier already declared", marker)
         self.vars[name_lower] = ast.Item(name, decl)
         self.scan()
         return decl
@@ -899,8 +919,8 @@ class Parser:
             item.Decl = sign
         else:
             item = ast.Item(name, sign)
-        if self.methods.get(name_lower) is not None:
-            raise AlreadyDeclared('Method already declared', marker[0])
+        if self.find_method(name_lower) is not None:
+            raise AlreadyDeclared('Method already declared', marker)
         self.methods[name_lower] = item
         if export:
             self.interface.append(item)
@@ -963,7 +983,7 @@ class Parser:
                 self.place_from(marker)
             )
         if self.vars.get(name_lower):
-            raise AlreadyDeclared('Identifier already declared', marker[0])
+            raise AlreadyDeclared('Identifier already declared', marker)
         self.vars[name_lower] = ast.Item(name, decl)
         return decl
 
@@ -1166,9 +1186,9 @@ class Parser:
         marker = self.marker()
         self.expect(Tokens.IDENT)
         var_pos = self.beg_pos
-        ident, var, call = self.parseIdentExpr()
+        ident, var, call = self.parseIdentExpr(True)
         if call:
-            raise UnexpectedSyntax('Variable expected', var_pos)
+            raise UnexpectedSyntax('Variable expected', self.mark_at(var_pos))
         self.expect(Tokens.EQL)
         self.scan()
         from_expr = self.parseExpression()
@@ -1200,7 +1220,7 @@ class Parser:
         var_pos = self.beg_pos
         ident, var, call = self.parseIdentExpr(True)
         if call:
-            raise UnexpectedSyntax('Variable expected', var_pos)
+            raise UnexpectedSyntax('Variable expected', self.mark_at(var_pos))
         self.expect(Keywords.IN)
         self.scan()
         collection = self.parseExpression()
@@ -1320,7 +1340,7 @@ class Parser:
         elif self.tok == Tokens.LPAREN:
             operand = self.parsePrepParenExpr()
         else:
-            raise UnexpectedToken('Preprocessor symbol expected', self.cur_pos - len(self.lit))
+            raise UnexpectedToken('Preprocessor symbol expected', self.mark_at(self.cur_pos - len(self.lit)))
         return operand
 
     def parsePrepSymExpr(self) -> ast.PrepExpr:
@@ -1374,6 +1394,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepElseInst(
             self.place_from(marker)
         )
@@ -1383,6 +1404,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepEndIfInst(
             self.place_from(marker)
         )
@@ -1393,7 +1415,7 @@ class Parser:
         self.scan()
         self.expect(Tokens.IDENT)
         name = self.lit
-        self.tok = Tokens.SEMICOLON
+        self.tok = Tokens.SEMICOLON  # cheat code
         inst = ast.PrepRegionInst(
             name,
             self.place_from(marker)
@@ -1404,6 +1426,7 @@ class Parser:
         marker = self.marker()
         self.tok = Tokens.SEMICOLON  # cheat code
         self.end_line = self.cur_line  # cheat code
+        self.end_column = self.cur_pos - self.line_pos  # cheat code
         inst = ast.PrepEndRegionInst(
             self.place_from(marker)
         )

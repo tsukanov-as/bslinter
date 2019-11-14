@@ -1,3 +1,6 @@
+# Copyright 2019 Tsukanov Alexander. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
 
 import pytest
 from bsl.parser import Parser, Error
@@ -50,6 +53,23 @@ class TestParser:
 
         with pytest.raises(UnexpectedToken):
             parse(" = 1")
+
+    def test_exception_pos(self):
+
+        try:
+            parse("&Test")
+        except UnknownToken as e:
+            assert e.pos == 1
+
+        try:
+            parse("x = 1 + =")
+        except UnexpectedToken as e:
+            assert e.pos == 8
+
+        try:
+            parse('text = "\n|\ny=1')
+        except UnexpectedToken as e:
+            assert e.pos == 11
 
     def test_error(self):
 
