@@ -256,7 +256,7 @@ class ManagedForm(XMLData):
 
         visitor.close_scope()
 
-        module_dir = os.path.join(self._path.rsplit('.')[0]) # TODO: заменить на корректный код
+        module_dir, _ = os.path.splitext(self._path)
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ManagedFormModule,

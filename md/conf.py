@@ -1049,8 +1049,7 @@ class CommonModuleProperties(XMLData):
             visitor.scope.Vars[self.Name.lower()] = item
 
         context.CommonModule.fill(visitor.scope)
-
-        module_dir = os.path.join(self._path.rsplit('.')[0]) # TODO: заменить на корректный код
+        module_dir, _ = os.path.splitext(self._path)
         module = ModuleFile(
             ModuleKinds.CommonModule,
             os.path.join(module_dir, 'Ext/Module.bsl'),
