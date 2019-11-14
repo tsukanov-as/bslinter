@@ -47,8 +47,6 @@ class Comment:
 
 class Node:
 
-    Place: Place
-
     @abstractmethod
     def visit(self, vesitor: Visitor):
         pass
@@ -94,7 +92,7 @@ Env = namedtuple('Env', [
 
 
 class Decl(Node):
-    pass
+    Place: Place
 
 class GlobalObject(Decl):
     """
@@ -324,7 +322,7 @@ class FuncSign(Decl):
 
 
 class Expr(Node):
-    pass
+    Place: Place
 
 
 # Общий тип для аргументов.
@@ -604,7 +602,7 @@ class StringExpr(Expr):
 
 
 class Stmt(Node):
-    pass
+    Place: Place
 
 
 class AssignStmt(Stmt):
@@ -928,7 +926,7 @@ class LabelStmt(Stmt):
 
 
 class PrepInst(Decl, Stmt):
-    pass
+    Place: Place
 
 
 class PrepIfInst(PrepInst):
@@ -1034,7 +1032,7 @@ class PrepEndRegionInst(PrepInst):
 
 
 class PrepExpr(Node):
-    pass
+    Place: Place
 
 
 class PrepBinaryExpr(PrepExpr):
