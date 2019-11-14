@@ -69,3 +69,11 @@ class LocalStringType(XMLData):
             for item in self.item:
                 item.visit(visitor)
         visitor.leave_LocalStringType(self)
+
+    def get(self, lang: str):
+        if not self.item:
+            return None
+        for value in self.item:
+            if value.lang == lang:
+                return value.content
+        return None

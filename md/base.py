@@ -123,7 +123,7 @@ class XMLParser:
     def end(self, name):
         if isinstance(self.item, XMLData):
             self.item._endLine = self.parser.CurrentLineNumber
-            self.item._endColumn = self.parser.CurrentColumnNumber + len(name) + 3  # </name>
+            self.item._endColumn = self.parser.CurrentColumnNumber # + len(name) + 3  # </name>
         self.meta, self.item, self.name = self.stack.pop()
 
     def chardata(self, data):

@@ -1397,11 +1397,11 @@ class DocumentProperties(XMLData):
     ]
 
     def visit(self, visitor: Visitor):
-        visitor.visit_ConfigurationProperties(self)
+        visitor.visit_DocumentProperties(self)
         for name in self._subnodes:
             if node := getattr(self, name):
                 node.visit(visitor)
-        visitor.leave_ConfigurationProperties(self)
+        visitor.leave_DocumentProperties(self)
 
 class DocumentChildObjects(XMLData):
     Attribute:      List[Attribute]

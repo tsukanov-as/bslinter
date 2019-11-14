@@ -116,6 +116,14 @@ class Visitor:
     def leave_Document(self, node):
         self.perform('leave_Document', node)
 
+    # DocumentProperties
+
+    def visit_DocumentProperties(self, node):
+        self.perform('visit_DocumentProperties', node)
+
+    def leave_DocumentProperties(self, node):
+        self.perform('leave_DocumentProperties', node)
+
     # DocumentChildObjects
 
     def visit_DocumentChildObjects(self, node):
