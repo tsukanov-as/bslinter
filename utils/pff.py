@@ -41,9 +41,9 @@ def parse(src):
                 seconds_net=float(table[i+7]),
                 percent_sum=float(table[i+8]),
                 percent_net=float(table[i+9]),
-                client_side=bool(table[i+10]),
-                server_side=bool(table[i+11]),
-                server_call=bool(table[i+12]),
+                client_side=bool(int(table[i+10])),
+                server_side=bool(int(table[i+11])),
+                server_call=bool(int(table[i+12])),
             )
         )
     return result
