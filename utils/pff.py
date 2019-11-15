@@ -1,6 +1,10 @@
 from dataclasses import dataclass
 import ripper
 
+"""
+Парсер отчета замера производительности.
+"""
+
 @dataclass
 class Row:
     thread_uuid: str
@@ -30,16 +34,16 @@ def parse(src):
                 module_uuid=table[i+1][1],
                 module_type=table[i+1][2],
                 module_name=table[i+2],
-                line_number=table[i+3],
+                line_number=int(table[i+3]),
                 source_code=table[i+4],
-                usage_count=table[i+5],
-                seconds_sum=table[i+6],
-                seconds_net=table[i+7],
-                percent_sum=table[i+8],
-                percent_net=table[i+9],
-                client_side=table[i+10],
-                server_side=table[i+11],
-                server_call=table[i+12],
+                usage_count=int(table[i+5]),
+                seconds_sum=float(table[i+6]),
+                seconds_net=float(table[i+7]),
+                percent_sum=float(table[i+8]),
+                percent_net=float(table[i+9]),
+                client_side=bool(table[i+10]),
+                server_side=bool(table[i+11]),
+                server_call=bool(table[i+12]),
             )
         )
     return result
