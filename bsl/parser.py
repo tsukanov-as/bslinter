@@ -108,6 +108,7 @@ class Parser:
         self.cur_pos: int = -1
         self.end_pos: int = -1
 
+        self.beg_line: int = 1
         self.cur_line: int = 1
         self.end_line: int = 1
         self.line_pos: int = 0
@@ -145,6 +146,7 @@ class Parser:
 
     def scan(self) -> Tokens:
 
+        # конец предыдущего токена
         self.end_pos = self.cur_pos
         self.end_line = self.cur_line
         self.end_column = self.cur_pos - self.line_pos
@@ -166,7 +168,9 @@ class Parser:
                     self.line_pos = self.cur_pos + 1
                 self.next()
 
+            # начало следующего токена
             self.beg_pos = self.cur_pos
+            self.beg_line = self.cur_line
             self.beg_column = self.cur_pos - self.line_pos
 
             if self.char.isalpha() or self.char == '_':
@@ -380,13 +384,13 @@ class Parser:
         return self.tok
 
     def place(self) -> ast.Place:
-        return ast.Place(self.beg_pos, self.cur_pos, self.cur_line, self.end_line, self.beg_column, self.end_column)
+        return ast.Place(self.beg_pos, self.cur_pos, self.beg_line, self.cur_line, self.beg_column, self.cur_pos - self.line_pos)
 
     def mark_at(self, pos):
         return Marker(pos, self.cur_line, pos - self.line_pos)
 
     def marker(self):
-        return Marker(self.beg_pos, self.cur_line, self.beg_column)
+        return Marker(self.beg_pos, self.beg_line, self.beg_column)
 
     def place_from(self, marker) -> ast.Place:
         return ast.Place(marker.pos, self.end_pos, marker.line, self.end_line, marker.column, self.end_column)
