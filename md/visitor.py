@@ -108,6 +108,22 @@ class Visitor:
     def leave_LanguageProperties(self, node):
         self.perform('leave_LanguageProperties', node)
 
+    # Role
+
+    def visit_Role(self, node):
+        self.perform('visit_Role', node)
+
+    def leave_Role(self, node):
+        self.perform('leave_Role', node)
+
+    # RoleProperties
+
+    def visit_RoleProperties(self, node):
+        self.perform('visit_RoleProperties', node)
+
+    def leave_RoleProperties(self, node):
+        self.perform('leave_RoleProperties', node)
+
     # CommonModule
 
     def visit_CommonModule(self, node):
@@ -226,6 +242,47 @@ class Visitor:
         self.perform('leave_FormProperties', node)
 
     #endregion conf
+
+    #region rights
+
+    # RestrictionByCondition
+
+    def visit_RestrictionByCondition(self, node):
+        self.perform('visit_RestrictionByCondition', node)
+
+    # Right
+
+    def visit_Right(self, node):
+        self.perform('visit_Right', node)
+
+    def leave_Right(self, node):
+        self.perform('leave_Right', node)
+
+    # ObjectRight
+
+    def visit_ObjectRight(self, node):
+        self.perform('visit_ObjectRight', node)
+
+    def leave_ObjectRight(self, node):
+        self.perform('leave_ObjectRight', node)
+
+    # RestrictionTemplate
+
+    def visit_RestrictionTemplate(self, node):
+        self.perform('visit_RestrictionTemplate', node)
+
+    def leave_RestrictionTemplate(self, node):
+        self.perform('leave_RestrictionTemplate', node)
+
+    # Rights
+
+    def visit_Rights(self, node):
+        self.perform('visit_Rights', node)
+
+    def leave_Rights(self, node):
+        self.perform('leave_Rights', node)
+
+    #endregion rights
 
     #region forms
 

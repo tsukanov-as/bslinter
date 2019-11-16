@@ -13,6 +13,7 @@ from bsl.parser import Parser
 
 from plugins.bsl.codestyle import CheckingClosingComments
 from plugins.md.conf.translation import CheckingDocumentStandardAttributes
+from plugins.md.conf.rights import CheckingInteractiveDelete
 import reports.sonar as sonar
 
 import time
@@ -27,7 +28,7 @@ def parse(module):
             try:
                 ast = parser.parse()
                 plugins = [
-                    CheckingClosingComments(module.path, src)
+                    CheckingClosingComments(module.path, src),
                 ]
                 visitor = bsl.visitor.Visitor(plugins)
                 ast.visit(visitor)
@@ -46,7 +47,8 @@ def main():
 
     path = "C:/dev/sonarqube/myprj/src/Configuration.xml"
     plugins = [
-        CheckingDocumentStandardAttributes()
+        CheckingDocumentStandardAttributes(),
+        CheckingInteractiveDelete(),
     ]
     root = XMLParser(path, cf.Root).parse()
     visitor = md.visitor.Visitor(plugins)

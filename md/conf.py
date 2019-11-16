@@ -12,6 +12,7 @@ from md.base import XMLData, XMLFile, XMLParser, fill_types
 
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks, MDObjectRef, QName, Uuid
 import md.forms as fm
+import md.rights as rights
 
 from bsl.ast import Item, GlobalObject, Env, VarModDecl
 from bsl.parser import Parser
@@ -435,7 +436,7 @@ class FormProperties(XMLData):
 
     def visit_ManagedForm(self, visitor: Visitor):
         if self.Name:
-            dirname = self._path.rsplit('.')[0]
+            dirname = os.path.splitext(self._path)[0]
             path = os.path.join(dirname, 'Ext/Form.xml')
             node: fm.Root = XMLParser(path, fm.Root).parse()
             form: Optional[fm.ManagedForm] = node.Form
@@ -1198,6 +1199,7 @@ class ConfigurationChildObjects(XMLData):
 
         visitor.visit_ConfigurationChildObjects(self)
         self.visit_Languages(visitor)
+        self.visit_Roles(visitor)
         self.visit_CommonModules(visitor)
         self.visit_Documents(visitor)
         visitor.leave_ConfigurationChildObjects(self)
@@ -1247,6 +1249,17 @@ class ConfigurationChildObjects(XMLData):
                 mdo: Optional[MetaDataObject] = node.MetaDataObject
                 if mdo and mdo.Language:
                     mdo.Language.visit(visitor)
+
+    def visit_Roles(self, visitor: Visitor):
+        dirname = os.path.dirname(self._path)
+        if names := self.Role:
+            subdirname = os.path.join(dirname, 'Roles')
+            for name in names:
+                path = os.path.join(subdirname, name + '.xml')
+                node: Root = XMLParser(path, Root).parse()
+                mdo: Optional[MetaDataObject] = node.MetaDataObject
+                if mdo and mdo.Role:
+                    mdo.Role.visit(visitor)
 
     def visit_CommonModules(self, visitor: Visitor):
         dirname = os.path.dirname(self._path)
@@ -1433,7 +1446,7 @@ class DocumentChildObjects(XMLData):
 
         context.DocumentObject.fill(scope)
 
-        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        modules_dir = os.path.join(os.path.splitext(self._path)[0], 'Ext')
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ObjectModule,
@@ -1458,7 +1471,7 @@ class DocumentChildObjects(XMLData):
                 node.visit(visitor)
 
     def visit_Forms(self, visitor: Visitor):
-        dirname = self._path.rsplit('.')[0]
+        dirname = os.path.splitext(self._path)[0]
         if names := self.Form:
             subdirname = os.path.join(dirname, 'Forms')
             for name in names:
@@ -1488,7 +1501,7 @@ class Document(XMLFile):
 
         context.DocumentManager.fill(visitor.scope)
 
-        modules_dir = os.path.join(self._path.rsplit('.')[0], 'Ext')
+        modules_dir = os.path.join(os.path.splitext(self._path)[0], 'Ext')
         visitor.modules.append(
             ModuleFile(
                 ModuleKinds.ManagerModule,
@@ -1801,9 +1814,28 @@ class RoleProperties(XMLData):
     Synonym: Optional[LocalStringType]
     Comment: Optional[str]
 
+    def visit(self, visitor: Visitor):
+        visitor.visit_RoleProperties(self)
+        if self.Synonym:
+            self.Synonym.visit(visitor)
+        visitor.leave_RoleProperties(self)
+
 class Role(XMLData):
     uuid:       Optional[str]
     Properties: Optional[RoleProperties]
+
+    def visit(self, visitor: Visitor):
+        visitor.visit_Role(self)
+        if self.Properties:
+            self.Properties.visit(visitor)
+        self.visit_Rights(visitor)
+        visitor.leave_Role(self)
+
+    def visit_Rights(self, visitor):
+        path = os.path.join(os.path.splitext(self._path)[0], 'Ext/Rights.xml')
+        node: Root = XMLParser(path, rights.Root).parse()
+        if node.Rights:
+            node.Rights.visit(visitor)
 
 class ScheduledJobProperties(XMLData):
     Name:                     Optional[str]
