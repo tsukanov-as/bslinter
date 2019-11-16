@@ -11,7 +11,8 @@ import bsl.visitor
 import bsl.ast as ast
 from bsl.parser import Parser
 
-from plugins.bsl.codestyle import CheckingClosingComments
+from plugins.bsl.comments import CheckingClosingComments
+from plugins.bsl.warnings import CheckingUnusedVariables
 from plugins.md.conf.translation import CheckingDocumentStandardAttributes
 from plugins.md.conf.rights import CheckingInteractiveDelete
 import reports.sonar as sonar
@@ -29,6 +30,7 @@ def parse(module):
                 ast = parser.parse()
                 plugins = [
                     CheckingClosingComments(module.path, src),
+                    CheckingUnusedVariables(module.path, src),
                 ]
                 visitor = bsl.visitor.Visitor(plugins)
                 ast.visit(visitor)
