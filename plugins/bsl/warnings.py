@@ -95,13 +95,41 @@ class CheckingUnusedVariables(IssueCollector):
 
         for var, value in self.vars.items():
             if not value.startswith("Get"):
-                self.issue(f'Неиспользуемая переменная "{var.Name}"', var)
+                self.issue(f'Неиспользуемая переменная "{var.Name}"', var.Place)
         for param, value in self.params.items():
             if value == "Nil" or value == "Set" and param.ByVal:
-                self.issue(f'Неиспользуемый параметр "{param.Name}"', param)
+                self.issue(f'Неиспользуемый параметр "{param.Name}"', param.Place)
 
-    def issue(self, msg, node):
-        place = node.Place
+    def issue(self, msg, place):
+        self.errors.append(Issue(
+            Kind.CODE_SMELL,
+            Severity.INFO,
+            msg,
+            2,
+            Location(
+                os.path.normpath(self.path),
+                place.BegLine,
+                place.EndLine,
+                place.BegColumn,
+                place.EndColumn,
+            )
+        ))
+
+class CheckingEmptyExcept(IssueCollector):
+
+    def __init__(self, path, src):
+        self.path = path
+        self.src = src
+        self.errors: List[Issue] = []
+
+    def close(self) -> Issues:
+        return Issues(self.errors)
+
+    def visit_ExceptStmt(self, node: ast.ExceptStmt):
+        if len(node.Body) == 0:
+            self.issue(f'Пустой блок Исключение', node.Place)
+
+    def issue(self, msg, place):
         self.errors.append(Issue(
             Kind.CODE_SMELL,
             Severity.INFO,
