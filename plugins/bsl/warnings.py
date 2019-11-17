@@ -10,9 +10,7 @@ import os.path
 
 class UnusedVariables(IssueCollector):
 
-    # TODO: Избавиться от FP (после добавления стека и счетчиков в визитер) и покрыть тестами.
-    # TODO: В циклах надо запоминать переменные в условии, т.к. их нужно чекать сразу после цикла и менять состояние.
-    # TODO: Указывать на место последнего присваивания переменной.
+    # TODO: покрыть тестами
 
     def __init__(self, path, src):
 
@@ -21,85 +19,62 @@ class UnusedVariables(IssueCollector):
         self.vars = {}
         self.params = {}
         self.assign_left = None
-        self.loop_level = 0
+        self.place = {}
         self.errors: List[Issue] = []
 
     def close(self) -> Issues:
         return Issues(self.errors)
 
-    def visit_AssignStmt(self, node: ast.AssignStmt):
+    def visit_AssignStmt(self, node: ast.AssignStmt, stack, counters):
         self.assign_left = node.Left
 
-    def leave_AssignStmt(self, node: ast.AssignStmt):
+    def leave_AssignStmt(self, node: ast.AssignStmt, stack, counters):
         if node.Left.Args is not None or len(node.Left.Tail) > 0:
             return
         decl = node.Left.Head.Decl
+        self.place[decl] = node.Place
         if type(decl) is ast.GlobalObject:
             return
-        if operation := self.vars.get(decl):
-            if operation == "GetInLoop":
-                self.vars[decl] = "Get"
-            else:
-                self.vars[decl] = "Set"
-            return
-        decl = node.Left.Head.Decl
-        if operation := self.params.get(decl):
-            if operation == "GetInLoop":
-                self.params[decl] = "Get"
-            else:
-                self.params[decl] = "Set"
+        if op := self.vars.get(decl):
+            if op != 'GetInLoop' or self.loop_level(counters) == 0:
+                self.vars[decl] = 'Set'
+        elif op := self.params.get(decl):
+            if op != 'GetInLoop' or self.loop_level(counters) == 0:
+                self.params[decl] = 'Set'
         self.assign_left = None
 
-    def visit_WhileStmt(self, node: ast.WhileStmt):
-        self.loop_level += 1
-
-    def leave_WhileStmt(self, node: ast.WhileStmt):
-        self.loop_level -= 1
-
-    def visit_ForStmt(self, node: ast.ForStmt):
-        self.loop_level += 1
-
-    def leave_ForStmt(self, node: ast.ForStmt):
-        self.loop_level -= 1
-
-    def visit_ForEachStmt(self, node: ast.ForEachStmt):
-        self.loop_level += 1
-
-    def leave_ForEachStmt(self, node: ast.ForEachStmt):
-        self.loop_level -= 1
-
-    def visit_IdentExpr(self, node: ast.IdentExpr):
+    def visit_IdentExpr(self, node: ast.IdentExpr, stack, counters):
         if len(node.Tail) == 0 and node == self.assign_left:
             return
-        if self.loop_level > 0:
-            operation = "GetInLoop"
-        else:
-            operation = "Get"
         decl = node.Head.Decl
+        op = self.loop_level(counters) > 0 and 'GetInLoop' or 'Get'
         if self.vars.get(decl):
-            self.vars[decl] = operation
+            self.vars[decl] = op
         elif self.params.get(decl):
-            self.params[decl] = operation
+            self.params[decl] = op
 
-    def visit_MethodDecl(self, node: ast.MethodDecl):
+    def visit_MethodDecl(self, node: ast.MethodDecl, stack, counters):
         self.vars = {}
         self.params = {}
         for param in node.Sign.Params:
-            self.params[param] = "Get"
+            self.params[param] = 'Get'
             #self.params[param] = "Nil" <- чтобы чекать все параметры (в формах адъ)
         for var in node.Vars:
-            self.vars[var] = "Set"
+            self.vars[var] = 'Set'
         for auto in node.Auto:
-            self.vars[auto] = "Set"
+            self.vars[auto] = 'Set'
 
-    def leave_MethodDecl(self, node: ast.MethodDecl):
+    def leave_MethodDecl(self, node: ast.MethodDecl, stack, counters):
 
         for var, value in self.vars.items():
-            if not value.startswith("Get"):
-                self.issue(f'Неиспользуемая переменная "{var.Name}"', var.Place)
+            if not value.startswith('Get'):
+                self.issue(f'Переменная "{var.Name}" не используется после присваивания', self.place.get(var) or var.Place)
         for param, value in self.params.items():
-            if value == "Nil" or value == "Set" and param.ByVal:
-                self.issue(f'Неиспользуемый параметр "{param.Name}"', param.Place)
+            if value == "Nil" or value == 'Set' and param.ByVal:
+                self.issue(f'Параметр "{param.Name}" не используется после присваивания', self.place.get(param) or param.Place)
+
+    def loop_level(self, counters):
+        return counters[ast.WhileStmt] + counters[ast.ForEachStmt] + counters[ast.ForStmt]
 
     def issue(self, msg, place):
         self.errors.append(Issue(
@@ -126,9 +101,9 @@ class EmptyExcept(IssueCollector):
     def close(self) -> Issues:
         return Issues(self.errors)
 
-    def visit_ExceptStmt(self, node: ast.ExceptStmt):
+    def visit_ExceptStmt(self, node: ast.ExceptStmt, stack, counters):
         if len(node.Body) == 0:
-            self.issue(f'Пустой блок Исключение', node.Place)
+            self.issue('Пустой блок Исключение', node.Place)
 
     def issue(self, msg, place):
         self.errors.append(Issue(
@@ -147,21 +122,28 @@ class EmptyExcept(IssueCollector):
 
 class Concatenation(IssueCollector):
 
-    # TODO: ругаться только на выражения в которых больше одного оператора сложения
-
     def __init__(self, path, src):
         self.path = path
         self.src = src
+        self.add_count = 0
+        self.concat = False
         self.errors: List[Issue] = []
 
     def close(self) -> Issues:
         return Issues(self.errors)
 
-    def visit_BinaryExpr(self, node: ast.BinaryExpr):
-        if (node.Operator == Tokens.ADD
-            and (type(node.Left) is ast.StringExpr
-                or type(node.Right) is ast.StringExpr)):
-            self.issue(f'Замените конкатенацию на StrTemplate или StrConcat', node.Place)
+    def leave_Expr(self, node: ast.Expr, stack, counters):
+        if self.concat and self.add_count > 1:
+            self.issue('Конкатенация неэффективна. Замените на StrTemplate или StrConcat.', node.Place)
+        self.add_count = 0
+        self.concat = False
+
+    def visit_BinaryExpr(self, node: ast.BinaryExpr, stack, counters):
+        if node.Operator == Tokens.ADD:
+            self.add_count += 1
+            if (type(node.Left) is ast.StringExpr
+                or type(node.Right) is ast.StringExpr):
+                self.concat = True
 
     def issue(self, msg, place):
         self.errors.append(Issue(
@@ -188,9 +170,9 @@ class StructureConstructor(IssueCollector):
     def close(self) -> Issues:
         return Issues(self.errors)
 
-    def visit_NewExpr(self, node: ast.NewExpr):
+    def visit_NewExpr(self, node: ast.NewExpr, stack, counters):
         if node.Name == 'Structure' and len(node.Args) > 2 and type(node.Args[0]) is ast.StringExpr:
-            self.issue(f'Уберите конструктор структуры', node.Place)
+            self.issue('Использование конструкторов структур затрудняет поддержку и доработку кода', node.Place)
 
     def issue(self, msg, place):
         self.errors.append(Issue(

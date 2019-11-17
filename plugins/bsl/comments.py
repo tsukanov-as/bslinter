@@ -22,19 +22,19 @@ class ClosingComments(IssueCollector):
     def close(self) -> Issues:
         return Issues(self.errors)
 
-    def visit_Module(self, node: ast.Module):
+    def visit_Module(self, node: ast.Module, stack, counters):
         self.comments = node.Comments
 
-    def visit_MethodDecl(self, node: ast.MethodDecl):
+    def visit_MethodDecl(self, node: ast.MethodDecl, stack, counters):
         line = node.Place.EndLine
         if comment := self.comments.get(line):
             if comment.text.rstrip() != f' {node.Sign.Name}()':
                 self.issue(f'Метод "{node.Sign.Name}()" имеет неправильный замыкающий комментарий.', comment)
 
-    def visit_PrepRegionInst(self, node: ast.PrepRegionInst):
+    def visit_PrepRegionInst(self, node: ast.PrepRegionInst, stack, counters):
         self.region_stack.append(node.Name)
 
-    def visit_PrepEndRegionInst(self, node: ast.PrepEndRegionInst):
+    def visit_PrepEndRegionInst(self, node: ast.PrepEndRegionInst, stack, counters):
         line = node.Place.EndLine
         region_name = self.region_stack.pop()
         if comment := self.comments.get(line):

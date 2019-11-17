@@ -30,7 +30,7 @@ def parse(module):
                 ast = parser.parse()
                 plugins = [
                     ClosingComments(module.path, src),
-                    # UnusedVariables(module.path, src),
+                    UnusedVariables(module.path, src),
                     EmptyExcept(module.path, src),
                     Concatenation(module.path, src),
                     StructureConstructor(module.path, src),

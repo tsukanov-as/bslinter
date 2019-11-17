@@ -5,7 +5,7 @@
 from typing import Union, List, Dict, Optional
 from decimal import Decimal
 from bsl.enums import Tokens, Keywords, Directives, PrepInstructions, PrepSymbols
-from bsl.visitor import Visitor, Plugin
+from bsl.visitor import Visitor
 from abc import abstractmethod
 from collections import namedtuple
 
@@ -234,7 +234,9 @@ class ParamDecl(Decl):
     def visit(self, visitor: Visitor):
         visitor.visit_ParamDecl(self)
         if self.Value is not None:
+            visitor.visit_Expr(self.Value)
             self.Value.visit(visitor)
+            visitor.leave_Expr(self.Value)
         visitor.leave_ParamDecl(self)
 
 
@@ -615,9 +617,17 @@ class AssignStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_AssignStmt(self)
+
+        visitor.visit_Expr(self.Left)
         self.Left.visit(visitor)
+        visitor.leave_Expr(self.Left)
+
+        visitor.visit_Expr(self.Right)
         self.Right.visit(visitor)
+        visitor.leave_Expr(self.Right)
+
         visitor.leave_AssignStmt(self)
 
 
@@ -631,9 +641,14 @@ class ReturnStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ReturnStmt(self)
+
         if self.Expr is not None:
+            visitor.visit_Expr(self.Expr)
             self.Expr.visit(visitor)
+            visitor.leave_Expr(self.Expr)
+
         visitor.leave_ReturnStmt(self)
 
 
@@ -669,9 +684,14 @@ class RaiseStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_RaiseStmt(self)
+
         if self.Expr is not None:
+            visitor.visit_Expr(self.Expr)
             self.Expr.visit(visitor)
+            visitor.leave_Expr(self.Expr)
+
         visitor.leave_RaiseStmt(self)
 
 
@@ -684,8 +704,13 @@ class ExecuteStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ExecuteStmt(self)
+
+        visitor.visit_Expr(self.Expr)
         self.Expr.visit(visitor)
+        visitor.leave_Expr(self.Expr)
+
         visitor.leave_ExecuteStmt(self)
 
 
@@ -698,8 +723,13 @@ class CallStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_CallStmt(self)
+
+        visitor.visit_Expr(self.Ident)
         self.Ident.visit(visitor)
+        visitor.leave_Expr(self.Ident)
+
         visitor.leave_CallStmt(self)
 
 
@@ -727,15 +757,23 @@ class IfStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_IfStmt(self)
+
+        visitor.visit_Expr(self.Cond)
         self.Cond.visit(visitor)
+        visitor.leave_Expr(self.Cond)
+
         for stmt in self.Then:
             stmt.visit(visitor)
+
         if self.ElsIf is not None:
             for stmt in self.ElsIf:
                 stmt.visit(visitor)
+
         if self.Else is not None:
             self.Else.visit(visitor)
+
         visitor.leave_IfStmt(self)
 
 
@@ -771,10 +809,16 @@ class ElsIfStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ElsIfStmt(self)
+
+        visitor.visit_Expr(self.Cond)
         self.Cond.visit(visitor)
+        visitor.leave_Expr(self.Cond)
+
         for stmt in self.Then:
             stmt.visit(visitor)
+
         visitor.leave_ElsIfStmt(self)
 
 
@@ -794,10 +838,16 @@ class WhileStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_WhileStmt(self)
+
+        visitor.visit_Expr(self.Cond)
         self.Cond.visit(visitor)
+        visitor.leave_Expr(self.Cond)
+
         for stmt in self.Body:
             stmt.visit(visitor)
+
         visitor.leave_WhileStmt(self)
 
 
@@ -820,12 +870,24 @@ class ForStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ForStmt(self)
+
+        visitor.visit_Expr(self.Ident)
         self.Ident.visit(visitor)
+        visitor.leave_Expr(self.Ident)
+
+        visitor.visit_Expr(self.From)
         self.From.visit(visitor)
+        visitor.leave_Expr(self.From)
+
+        visitor.visit_Expr(self.To)
         self.To.visit(visitor)
+        visitor.leave_Expr(self.To)
+
         for stmt in self.Body:
             stmt.visit(visitor)
+
         visitor.leave_ForStmt(self)
 
 
@@ -847,11 +909,20 @@ class ForEachStmt(Stmt):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_ForEachStmt(self)
+
+        visitor.visit_Expr(self.Ident)
         self.Ident.visit(visitor)
+        visitor.leave_Expr(self.Ident)
+
+        visitor.visit_Expr(self.In)
         self.In.visit(visitor)
+        visitor.leave_Expr(self.In)
+
         for stmt in self.Body:
             stmt.visit(visitor)
+
         visitor.leave_ForEachStmt(self)
 
 
@@ -944,8 +1015,13 @@ class PrepIfInst(PrepInst):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_PrepIfInst(self)
+
+        visitor.visit_PrepExpr(self.Cond)
         self.Cond.visit(visitor)
+        visitor.leave_PrepExpr(self.Cond)
+
         visitor.leave_PrepIfInst(self)
 
 
@@ -964,8 +1040,13 @@ class PrepElsIfInst(PrepInst):
         self.Place: Place = place
 
     def visit(self, visitor: Visitor):
+
         visitor.visit_PrepElsIfInst(self)
+
+        visitor.visit_PrepExpr(self.Cond)
         self.Cond.visit(visitor)
+        visitor.leave_PrepExpr(self.Cond)
+
         visitor.leave_PrepElsIfInst(self)
 
 
