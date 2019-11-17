@@ -11,8 +11,9 @@ import bsl.visitor
 import bsl.ast as ast
 from bsl.parser import Parser
 
-from plugins.bsl.comments import ClosingComments
-from plugins.bsl.warnings import UnusedVariables, EmptyExcept, Concatenation, StructureConstructor
+import plugins.bsl.comments as comments
+import plugins.bsl.warnings as warnings
+import plugins.bsl.errors as errors
 from plugins.md.conf.translation import DocumentStandardAttributes
 from plugins.md.conf.rights import InteractiveDelete
 import reports.sonar as sonar
@@ -29,11 +30,12 @@ def parse(module):
             try:
                 ast = parser.parse()
                 plugins = [
-                    ClosingComments(module.path, src),
-                    UnusedVariables(module.path, src),
-                    EmptyExcept(module.path, src),
-                    Concatenation(module.path, src),
-                    StructureConstructor(module.path, src),
+                    comments.ClosingComments(module.path, src),
+                    warnings.UnusedVariables(module.path, src),
+                    warnings.EmptyExcept(module.path, src),
+                    warnings.Concatenation(module.path, src),
+                    warnings.StructureConstructor(module.path, src),
+                    errors.DuplicateConditions(module.path, src),
                 ]
                 visitor = bsl.visitor.Visitor(plugins)
                 ast.visit(visitor)
