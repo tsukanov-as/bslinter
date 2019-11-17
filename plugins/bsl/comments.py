@@ -7,7 +7,7 @@ from typing import List
 from output.issues import Issue, Issues, Kind, Severity, Location, IssueCollector
 import os.path
 
-class CheckingClosingComments(IssueCollector):
+class ClosingComments(IssueCollector):
 
     # TODO: более конкретные сообщения: "Пропущен пробел", "Не хватает скобок" ...
 

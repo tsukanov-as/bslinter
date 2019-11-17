@@ -3,15 +3,16 @@
 # license that can be found in the LICENSE file.
 
 import bsl.ast as ast
+from bsl.enums import Tokens
 from typing import List
 from output.issues import Issue, Issues, Kind, Severity, Location, IssueCollector
 import os.path
 
-class CheckingUnusedVariables(IssueCollector):
+class UnusedVariables(IssueCollector):
 
     # TODO: Избавиться от FP (после добавления стека и счетчиков в визитер) и покрыть тестами.
     # TODO: В циклах надо запоминать переменные в условии, т.к. их нужно чекать сразу после цикла и менять состояние.
-    # TODO: Указывать на место последнего присваивания переменное.
+    # TODO: Указывать на место последнего присваивания переменной.
 
     def __init__(self, path, src):
 
@@ -115,7 +116,7 @@ class CheckingUnusedVariables(IssueCollector):
             )
         ))
 
-class CheckingEmptyExcept(IssueCollector):
+class EmptyExcept(IssueCollector):
 
     def __init__(self, path, src):
         self.path = path
@@ -128,6 +129,68 @@ class CheckingEmptyExcept(IssueCollector):
     def visit_ExceptStmt(self, node: ast.ExceptStmt):
         if len(node.Body) == 0:
             self.issue(f'Пустой блок Исключение', node.Place)
+
+    def issue(self, msg, place):
+        self.errors.append(Issue(
+            Kind.CODE_SMELL,
+            Severity.INFO,
+            msg,
+            2,
+            Location(
+                os.path.normpath(self.path),
+                place.BegLine,
+                place.EndLine,
+                place.BegColumn,
+                place.EndColumn,
+            )
+        ))
+
+class Concatenation(IssueCollector):
+
+    # TODO: ругаться только на выражения в которых больше одного оператора сложения
+
+    def __init__(self, path, src):
+        self.path = path
+        self.src = src
+        self.errors: List[Issue] = []
+
+    def close(self) -> Issues:
+        return Issues(self.errors)
+
+    def visit_BinaryExpr(self, node: ast.BinaryExpr):
+        if (node.Operator == Tokens.ADD
+            and (type(node.Left) is ast.StringExpr
+                or type(node.Right) is ast.StringExpr)):
+            self.issue(f'Замените конкатенацию на StrTemplate или StrConcat', node.Place)
+
+    def issue(self, msg, place):
+        self.errors.append(Issue(
+            Kind.CODE_SMELL,
+            Severity.INFO,
+            msg,
+            2,
+            Location(
+                os.path.normpath(self.path),
+                place.BegLine,
+                place.EndLine,
+                place.BegColumn,
+                place.EndColumn,
+            )
+        ))
+
+class StructureConstructor(IssueCollector):
+
+    def __init__(self, path, src):
+        self.path = path
+        self.src = src
+        self.errors: List[Issue] = []
+
+    def close(self) -> Issues:
+        return Issues(self.errors)
+
+    def visit_NewExpr(self, node: ast.NewExpr):
+        if node.Name == 'Structure' and len(node.Args) > 2 and type(node.Args[0]) is ast.StringExpr:
+            self.issue(f'Уберите конструктор структуры', node.Place)
 
     def issue(self, msg, place):
         self.errors.append(Issue(

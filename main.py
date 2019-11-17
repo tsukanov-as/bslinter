@@ -11,10 +11,10 @@ import bsl.visitor
 import bsl.ast as ast
 from bsl.parser import Parser
 
-from plugins.bsl.comments import CheckingClosingComments
-from plugins.bsl.warnings import CheckingUnusedVariables, CheckingEmptyExcept
-from plugins.md.conf.translation import CheckingDocumentStandardAttributes
-from plugins.md.conf.rights import CheckingInteractiveDelete
+from plugins.bsl.comments import ClosingComments
+from plugins.bsl.warnings import UnusedVariables, EmptyExcept, Concatenation, StructureConstructor
+from plugins.md.conf.translation import DocumentStandardAttributes
+from plugins.md.conf.rights import InteractiveDelete
 import reports.sonar as sonar
 
 import time
@@ -29,9 +29,11 @@ def parse(module):
             try:
                 ast = parser.parse()
                 plugins = [
-                    CheckingClosingComments(module.path, src),
-                    # CheckingUnusedVariables(module.path, src),
-                    CheckingEmptyExcept(module.path, src),
+                    ClosingComments(module.path, src),
+                    # UnusedVariables(module.path, src),
+                    EmptyExcept(module.path, src),
+                    Concatenation(module.path, src),
+                    StructureConstructor(module.path, src),
                 ]
                 visitor = bsl.visitor.Visitor(plugins)
                 ast.visit(visitor)
@@ -50,8 +52,8 @@ def main():
 
     path = "C:/dev/sonarqube/myprj/src/Configuration.xml"
     plugins = [
-        CheckingDocumentStandardAttributes(),
-        CheckingInteractiveDelete(),
+        DocumentStandardAttributes(),
+        InteractiveDelete(),
     ]
     root = XMLParser(path, cf.Root).parse()
     visitor = md.visitor.Visitor(plugins)
@@ -84,6 +86,7 @@ def main():
 
     print('bsl time: ', time.perf_counter() - strt)
 
+    print('issues count: ', len(issues))
 
 if __name__ == "__main__":
     main()

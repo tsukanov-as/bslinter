@@ -7,7 +7,7 @@ from typing import List, Dict, Optional
 from output.issues import Issue, Issues, Kind, Severity, Location, IssueCollector
 import os.path
 
-class CheckingDocumentStandardAttributes(IssueCollector):
+class DocumentStandardAttributes(IssueCollector):
 
     # TODO: обработать случай, когда стандартного реквизита вообще нет в xml
 

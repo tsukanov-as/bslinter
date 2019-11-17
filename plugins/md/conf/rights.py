@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 from output.issues import Issue, Issues, Kind, Severity, Location, IssueCollector
 import os.path
 
-class CheckingInteractiveDelete(IssueCollector):
+class InteractiveDelete(IssueCollector):
 
     def __init__(self):
         self.role_name = ''
