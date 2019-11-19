@@ -31,6 +31,7 @@ def parse(module):
                 ast = parser.parse()
                 plugins = [
                     comments.ClosingComments(module.path, src),
+                    comments.CommentedOutCode(module.path, src),
                     warnings.UnusedVariables(module.path, src),
                     warnings.EmptyExcept(module.path, src),
                     warnings.Concatenation(module.path, src),
