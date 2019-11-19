@@ -171,7 +171,10 @@ class StructureConstructor(IssueCollector):
         return Issues(self.errors)
 
     def visit_NewExpr(self, node: ast.NewExpr, stack, counters):
-        if node.Name == 'Structure' and len(node.Args) > 2 and type(node.Args[0]) is ast.StringExpr:
+        if (node.Name
+            and node.Name.lower() in ['structure', 'структура']
+            and len(node.Args) > 2
+            and type(node.Args[0]) is ast.StringExpr):
             self.issue('Использование конструкторов структур затрудняет поддержку и доработку кода', node.Place)
 
     def issue(self, msg, place):
