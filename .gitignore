@@ -6,3 +6,5 @@ __pycache__
 *.txt
 sandbox.py
 /sandbox/
+/venv/
+/.idea/
