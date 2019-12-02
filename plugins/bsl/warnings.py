@@ -191,3 +191,41 @@ class StructureConstructor(IssueCollector):
                 place.EndColumn,
             )
         ))
+
+class Deprecated(IssueCollector):
+
+    def __init__(self, path, src):
+        self.path = path
+        self.src = src
+        self.errors: List[Issue] = []
+        self.deprecated = [
+            'getfiles',
+            'getfile',
+            'putfile',
+            'putfiles',
+            'begingettingfiles',
+            'beginputfile',
+            'beginputtingfiles',
+        ]
+
+    def close(self) -> Issues:
+        return Issues(self.errors)
+
+    def visit_IdentExpr(self, node: ast.IdentExpr, stack, counters):
+        if node.Args is not None and node.Head.Name.lower() in self.deprecated:
+            self.issue('Метод устарел', node.Place)
+
+    def issue(self, msg, place):
+        self.errors.append(Issue(
+            Kind.CODE_SMELL,
+            Severity.INFO,
+            msg,
+            2,
+            Location(
+                os.path.normpath(self.path),
+                place.BegLine,
+                place.EndLine,
+                place.BegColumn,
+                place.EndColumn,
+            )
+        ))
