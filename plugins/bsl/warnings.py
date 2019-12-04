@@ -215,6 +215,10 @@ class Deprecated(IssueCollector):
         if node.Args is not None and node.Head.Name.lower() in self.deprecated:
             self.issue('Метод устарел', node.Place)
 
+    def visit_NewExpr(self, node: ast.NewExpr, stack, counters):
+        if (node.Name and node.Name.lower() == "filedialog"):
+            self.issue('Диалог требует установки расширения для работы с файлами', node.Place)
+
     def issue(self, msg, place):
         self.errors.append(Issue(
             Kind.CODE_SMELL,
