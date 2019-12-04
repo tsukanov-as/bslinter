@@ -1,5 +1,7 @@
 # bslinter
 
+![bslinter](_gifs/show.gif)
+
 Чат: https://t.me/bslinter
 
 Используется:
