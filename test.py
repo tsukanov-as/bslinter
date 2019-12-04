@@ -1,4 +1,7 @@
-﻿
+﻿# Copyright 2019 Tsukanov Alexander. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 """
 Это пример отладочного скрипта для разработки диагностики исходного кода.
 Запуск выполняется в один поток и анализируется один файл test.bsl - это позволяет
@@ -7,7 +10,6 @@
 то нужно выключить настройку "python.dataScience.debugJustMyCode".
 """
 
-import plugins.bsl.errors as errors
 from bsl.parser import Parser
 import bsl.visitor
 import os.path
@@ -17,7 +19,7 @@ class Test:
 
     """
     Плагин - диагностика исходного кода в простейшем виде для отладки.
-    Ошибки просто выводятся в консоль.
+    Ошибки просто собираются в список.
     """
 
     def __init__(self, path, src):
@@ -47,13 +49,13 @@ def parse():
             src = f.read()
             parser = Parser(src)
             try:
-                ast = parser.parse() # разбор исходного кода с результатом в виде AST
+                AST = parser.parse() # разбор исходного кода с результатом в виде AST
                 plugins = [
                     Test(path, src),
                     # сюда можно добавить еще плагины
                 ]
                 visitor = bsl.visitor.Visitor(plugins) # создание визитера с набором указанных плагинов
-                ast.visit(visitor) # обход AST, в процессе которого вызываются методы плагинов.
+                AST.visit(visitor) # обход AST, в процессе которого вызываются методы плагинов.
                 results = [] # список результатов работы плагинов
                 for plugin in plugins:
                     results.append(plugin.close())
@@ -61,6 +63,7 @@ def parse():
             except Exception as e:
                 print(path)
                 print(e)
+                return []
 
 results = parse()
 
