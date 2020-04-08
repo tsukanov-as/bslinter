@@ -1061,4 +1061,48 @@ class AutoShowStateMode(EnumBase):
     SHOW = auto()
     SHOWONCOMPOSITION = auto()
 
+####
+
+class DataCompositionConditionalAppearanceUse(EnumBase):
+    USE = auto()
+    DONTUSE = auto()
+
+class DataCompositionSettingsItemViewMode(EnumBase):
+    NORMAL = auto()
+    QUICKACCESS = auto()
+    INACCESSIBLE = auto()
+    AUTO = auto()
+
+class DataCompositionComparisonType(EnumBase):
+    EQUAL = auto()
+    NOTEQUAL = auto()
+    LESS = auto()
+    LESSOREQUAL = auto()
+    GREATER = auto()
+    GREATEROREQUAL = auto()
+    CONTAINS = auto()
+    INLIST = auto()
+    INLISTBYHIERARCHY = auto()
+    INHIERARCHY = auto()
+    NOTCONTAINS = auto()
+    NOTINLIST = auto()
+    NOTINLISTBYHIERARCHY = auto()
+    NOTINHIERARCHY = auto()
+    FILLED = auto()
+    NOTFILLED = auto()
+    BEGINSWITH = auto()
+    NOTBEGINSWITH = auto()
+    LIKE = auto()
+    NOTLIKE = auto()
+
+class DataCompositionFilterApplicationType(EnumBase):
+    ITEMS = auto()
+    HIERARCHY = auto()
+    HIERARCHYONLY = auto()
+
+class DataCompositionFilterItemsGroupType(EnumBase):
+    ANDGROUP = auto()
+    ORGROUP = auto()
+    NOTGROUP = auto()
+
 #endregion forms

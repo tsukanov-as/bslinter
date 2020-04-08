@@ -8,6 +8,7 @@ from enum import EnumMeta
 
 from md.common import LocalStringType, LocalStringTypeItem, MDObjectRef, TypeDescription, ChoiceParameterLinks
 from md.base import XMLData, XMLFile, OrderedXMLData, fill_types
+import md.dcs as dcs
 import md.enums as enums
 from md.visitor import Visitor, ModuleFile, ModuleKinds
 import md.context as context
@@ -344,7 +345,7 @@ class FormAttribute(XMLData):
 
 class FormAttributes(XMLData):
     Attribute: List[FormAttribute]
-    # Items["ConditionalAppearance"] = "ConditionalAppearance";
+    ConditionalAppearance: Optional[dcs.ConditionalAppearance]
 
     def visit(self, visitor: Visitor):
 
