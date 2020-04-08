@@ -74,7 +74,7 @@ class ConditionalAppearanceItem(XMLData):
     useInFilter: Optional[enums.DataCompositionConditionalAppearanceUse]
 
 class ConditionalAppearance(XMLData):
-    item: Optional[ConditionalAppearanceItem]
+    item: List[ConditionalAppearanceItem]
     viewMode: Optional[enums.DataCompositionSettingsItemViewMode]
     userSettingID: Optional[str]
     userSettingPresentation: Optional[str] #???
