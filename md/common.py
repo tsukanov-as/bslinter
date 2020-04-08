@@ -5,7 +5,7 @@
 from typing import List, Optional
 from decimal import Decimal
 import md.enums as enums
-from md.base import XMLData, fill_types
+from md.base import XMLData, XMLTypedValue, fill_types
 from md.visitor import Visitor
 
 Uuid = str
@@ -77,3 +77,8 @@ class LocalStringType(XMLData):
             if value.lang == lang:
                 return value.content
         return None
+
+class TypedValue(XMLTypedValue):
+    type: Optional[str]
+    _text: Optional[str]
+    _types2 = {'LocalStringType': LocalStringType}

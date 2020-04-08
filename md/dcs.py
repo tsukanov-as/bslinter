@@ -4,14 +4,11 @@ from decimal import Decimal
 from enum import EnumMeta
 
 from md.base import XMLData, fill_types #, XMLFile, OrderedXMLData
+from md.common import TypedValue
 import md.enums as enums
 
 Field = str
 ParameterType = str
-
-class TypedValue(XMLData):
-    type: Optional[str]
-    _text: Optional[str]
 
 class ParameterValue(XMLData):
     use: Optional[enums.Bool]

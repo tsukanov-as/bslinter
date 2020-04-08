@@ -33,7 +33,9 @@ class XMLFile(XMLData):
     pass
 
 class OrderedXMLData(XMLData):
+    pass
 
+class XMLTypedValue(XMLData):
     pass
 
 class XMLParser:
@@ -70,6 +72,7 @@ class XMLParser:
 
         item = None
         if td := self.meta._types.get(name):
+            meta = None
             if td.list:
                 items = getattr(self.item, name)
                 if items is None:
@@ -113,7 +116,11 @@ class XMLParser:
                             else:
                                 setattr(item, attr, attrtd.meta(data))
                             pass
-            self.meta = td.meta
+                    if issubclass(td.meta, XMLTypedValue):
+                        if (i := item.type.find(':')) >= 0:
+                            item.type = item.type[i+1:]
+                        meta = item._types2.get(item.type)
+            self.meta = meta or td.meta
         else:
             self.meta = None
 
@@ -141,6 +148,9 @@ class XMLParser:
             if type(array) == list:
                 array.append(value)
             else:
+                if type(value) is str:
+                    array = array or ''
+                    value = array + value
                 setattr(item, self.name, value)
         elif td := self.meta._types.get('_text'):
             if type(td.meta) == EnumMeta:
